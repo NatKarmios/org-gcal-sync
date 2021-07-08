@@ -21,8 +21,6 @@ import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.Events
 import java.io.*
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneOffset
 
 
 class GcalClient(private val calendarId: String) {
@@ -79,7 +77,7 @@ class GcalClient(private val calendarId: String) {
         private val JSON_FACTORY: JsonFactory = JacksonFactory.getDefaultInstance()
         private const val TOKENS_DIRECTORY_PATH = "tokens"
         private val SCOPES = listOf(CalendarScopes.CALENDAR)
-        private const val CREDENTIALS_FILE_PATH = "/credentials.json"
+        private const val CREDENTIALS_FILE_PATH = "./credentials.json"
 
         private fun <T>callback(name: String, action: String): JsonBatchCallback<T> = object : JsonBatchCallback<T>() {
             override fun onSuccess(t: T?, responseHeaders: HttpHeaders?) {}
@@ -93,9 +91,9 @@ class GcalClient(private val calendarId: String) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val `in` = GcalClient::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
-            ?: throw FileNotFoundException("Resource not found: $CREDENTIALS_FILE_PATH")
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, InputStreamReader(`in`))
+        val file = File(CREDENTIALS_FILE_PATH)
+        if (!file.exists()) throw FileNotFoundException("File not found: $CREDENTIALS_FILE_PATH")
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, file.reader())
 
         // Build flow and trigger user authorization request.
         val flow = GoogleAuthorizationCodeFlow.Builder(
