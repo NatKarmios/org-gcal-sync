@@ -19,9 +19,12 @@ dependencies {
     compile("com.google.api-client:google-api-client:1.23.0")
     compile("com.google.oauth-client:google-oauth-client-jetty:1.23.0")
     compile("com.google.apis:google-api-services-calendar:v3-rev305-1.23.0")
+    compile("com.sksamuel.hoplite:hoplite-core:1.4.3")
+    compile("com.sksamuel.hoplite:hoplite-yaml:1.4.3")
 }
 
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
     languageVersion = "1.5"
+    jvmTarget = JavaVersion.VERSION_1_8.toString()
 }
