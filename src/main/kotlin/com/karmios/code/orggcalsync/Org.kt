@@ -2,6 +2,7 @@ package com.karmios.code.orggcalsync
 
 import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
+import com.orgzly.org.parser.OrgNodeInList
 import com.orgzly.org.parser.OrgParser
 import java.io.File
 import java.util.*
@@ -11,18 +12,19 @@ sealed interface Org {
     val inheritedTags: List<String>
 
     companion object {
-        fun loadFrom(fileName: String): OrgRoot {
-            val org = OrgParser.Builder()
+        private fun loadHeadsFrom(fileName: String, ): List<OrgNodeInList> =
+            OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
                 .setTodoKeywords(setOf("TODO", "WAIT", "PROJ", "STRT"))
                 .setDoneKeywords(setOf("DONE", "KILL"))
                 .build()
                 .parse()
-            return OrgRoot(org.headsInList)
-        }
+                .headsInList
+
+        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile), config)
     }
 
-    class OrgRoot private constructor(nodes: Queue<OrgNode>) : Org {
+    class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
         override val children: List<OrgNodeInTree>
 
         init {
@@ -32,7 +34,7 @@ sealed interface Org {
             this.children = children
         }
 
-        constructor(nodes: List<OrgNode>) : this(LinkedList(nodes) as Queue<OrgNode>)
+        constructor(nodes: List<OrgNode>, config: Config) : this(LinkedList(nodes) as Queue<OrgNode>, config)
 
         override val inheritedTags: List<String> = emptyList()
 
@@ -43,10 +45,12 @@ sealed interface Org {
             return node
         }
 
-        fun findEventsAt(path: String) : List<OrgEvent>? {
+        private fun findEventsAt(path: String) : List<OrgEvent>? {
             val node = findNodeAt(path) ?: return null
             return OrgEvent.buildListFrom(node)
         }
+
+        fun findEvents(config: Config = this.config): List<OrgEvent>? = findEventsAt(config.orgEventsPath)
     }
 
     class OrgNodeInTree (node: OrgNode, nodes: Queue<OrgNode>, private val parent: Org) : Org {
