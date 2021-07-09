@@ -21,6 +21,7 @@ dependencies {
     compile("com.google.apis:google-api-services-calendar:v3-rev305-1.23.0")
     compile("com.sksamuel.hoplite:hoplite-core:1.4.3")
     compile("com.sksamuel.hoplite:hoplite-yaml:1.4.3")
+    compile("org.jetbrains.kotlinx:kotlinx-cli:0.3.2")
 }
 
 val compileKotlin: KotlinCompile by tasks
