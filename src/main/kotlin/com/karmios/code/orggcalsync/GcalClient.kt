@@ -42,7 +42,7 @@ class GcalClient (private val config: Config) {
         return events.items
     }
 
-    fun process(changes: Changes) {
+    fun process(changes: Changes, dryRun: Boolean = false) {
         println("Create: ${changes.create.size}")
         println("Update: ${changes.update.size}")
         println("Delete: ${changes.delete.size}")
@@ -66,7 +66,10 @@ class GcalClient (private val config: Config) {
         calls.chunked(50).forEach { callChunk ->
             val req = service.batch()
             callChunk.forEach { it(req) }
-            println("Skipping execute!")  // req.execute()
+            if (dryRun)
+                println("Dry run - skipping Gcal execute!")
+            else
+                req.execute()
         }
     }
 
