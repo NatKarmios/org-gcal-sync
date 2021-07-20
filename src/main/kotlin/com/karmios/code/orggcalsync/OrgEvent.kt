@@ -4,6 +4,7 @@ import com.orgzly.org.OrgHead
 import com.orgzly.org.datetime.OrgDateTime
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
+import org.apache.logging.log4j.LogManager
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Calendar
@@ -16,6 +17,8 @@ data class OrgEvent(
     val reminderOffset: Int? = null
 ) {
     companion object {
+        private val logger = LogManager.getLogger(OrgEvent::class.java)
+
         private fun fromOrg(head: OrgHead, ends: Map<String, EventDate>): OrgEvent? {
             if ("end" in head.tags) return null
             val start = head.scheduled?.startTime
@@ -41,6 +44,7 @@ data class OrgEvent(
                 } else null
             }.toMap()
             return heads.mapNotNull { fromOrg(it, ends) }
+                .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
         fun buildListFrom(tree: Org) = buildListFrom(tree.children.map { it.head })
