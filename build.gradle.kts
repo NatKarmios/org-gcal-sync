@@ -22,6 +22,9 @@ dependencies {
     compile("com.sksamuel.hoplite:hoplite-core:1.4.3")
     compile("com.sksamuel.hoplite:hoplite-yaml:1.4.3")
     compile("org.jetbrains.kotlinx:kotlinx-cli:0.3.2")
+    compile("org.apache.logging.log4j:log4j-api:2.14.1")
+    compile("org.apache.logging.log4j:log4j-core:2.14.1")
+    compile("org.apache.logging.log4j:log4j-slf4j-impl:2.14.1")
 }
 
 val compileKotlin: KotlinCompile by tasks

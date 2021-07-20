@@ -4,6 +4,7 @@ import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
 import com.orgzly.org.parser.OrgNodeInList
 import com.orgzly.org.parser.OrgParser
+import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.util.*
 
@@ -12,12 +13,15 @@ sealed interface Org {
     val inheritedTags: List<String>
 
     companion object {
+        private val logger = LogManager.getLogger(Org::class.java)
+
         private fun loadHeadsFrom(fileName: String, ): List<OrgNodeInList> =
             OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
                 .setTodoKeywords(setOf("TODO", "WAIT", "PROJ", "STRT"))
                 .setDoneKeywords(setOf("DONE", "KILL"))
                 .build()
+                .also { logger.info("Reading and parsing org from '$fileName'") }
                 .parse()
                 .headsInList
 
@@ -26,6 +30,7 @@ sealed interface Org {
 
     class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
         override val children: List<OrgNodeInTree>
+        private val logger = LogManager.getLogger(OrgRoot::class.java)
 
         init {
             val children = mutableListOf<OrgNodeInTree>()
@@ -46,11 +51,13 @@ sealed interface Org {
         }
 
         private fun findEventsAt(path: String) : List<OrgEvent>? {
+            logger.debug("Finding event headlines at '$path'")
             val node = findNodeAt(path) ?: return null
             return OrgEvent.buildListFrom(node)
         }
 
-        fun findEvents(config: Config = this.config): List<OrgEvent>? = findEventsAt(config.orgEventsPath)
+        fun findEvents(config: Config = this.config): List<OrgEvent> = findEventsAt(config.orgEventsPath)
+            ?: throw IllegalArgumentException("Couldn't find event parent node at '${config.orgEventsPath}'!")
     }
 
     class OrgNodeInTree (node: OrgNode, nodes: Queue<OrgNode>, private val parent: Org) : Org {
