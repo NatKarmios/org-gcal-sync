@@ -31,9 +31,9 @@ class GcalClient (private val config: Config) {
     private val service = getService()
     private val logger = LogManager.getLogger(GcalClient::class.java)
 
-    fun getEvents(startMonthOffset: Long = -2, endMonthOffset: Long = 6): List<Event> {
+    fun getEvents(startMonthOffset: Long = 0, endMonthOffset: Long = 6): List<Event> {
         val now = LocalDate.now()
-        val rangeStart = now.plusMonths(startMonthOffset)
+        val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
         val rangeEnd = now.plusMonths(endMonthOffset)
         val events: Events = service.events().list(config.calendarId)
             .setMaxResults(1000)
