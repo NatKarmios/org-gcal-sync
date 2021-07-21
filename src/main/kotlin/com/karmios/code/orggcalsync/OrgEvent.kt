@@ -1,7 +1,6 @@
 package com.karmios.code.orggcalsync
 
 import com.orgzly.org.OrgHead
-import com.orgzly.org.datetime.OrgDateTime
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
@@ -35,7 +34,11 @@ data class OrgEvent(
             )
         }
 
-        private fun buildListFrom(heads: List<OrgHead>): List<OrgEvent> {
+        private fun buildListFrom(allHeads: List<OrgHead>, config: Config): List<OrgEvent> {
+            val heads = if (config.includeDone)
+                allHeads
+            else
+                allHeads.filter { it.state !in config.stateKeywords.second }
             val ends = heads.mapNotNull { head ->
                 if ("end" in head.tags) {
                     head.scheduled?.startTime
@@ -47,7 +50,7 @@ data class OrgEvent(
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
-        fun buildListFrom(tree: Org) = buildListFrom(tree.children.map { it.head })
+        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children.map { it.head }, config)
 
         private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
             return when (delay.unit) {
