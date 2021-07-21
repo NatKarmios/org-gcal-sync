@@ -15,17 +15,17 @@ sealed interface Org {
     companion object {
         private val logger = LogManager.getLogger(Org::class.java)
 
-        private fun loadHeadsFrom(fileName: String, ): List<OrgNodeInList> =
+        private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
             OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
-                .setTodoKeywords(setOf("TODO", "WAIT", "PROJ", "STRT"))
-                .setDoneKeywords(setOf("DONE", "KILL"))
+                .setTodoKeywords(config.stateKeywords.first.toSet())
+                .setDoneKeywords(config.stateKeywords.second.toSet())
                 .build()
                 .also { logger.info("Reading and parsing org from '$fileName'") }
                 .parse()
                 .headsInList
 
-        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile), config)
+        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile, config), config)
     }
 
     class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
@@ -53,7 +53,7 @@ sealed interface Org {
         private fun findEventsAt(path: String) : List<OrgEvent>? {
             logger.debug("Finding event headlines at '$path'")
             val node = findNodeAt(path) ?: return null
-            return OrgEvent.buildListFrom(node)
+            return OrgEvent.buildListFrom(node, config)
         }
 
         fun findEvents(config: Config = this.config): List<OrgEvent> = findEventsAt(config.orgEventsPath)
