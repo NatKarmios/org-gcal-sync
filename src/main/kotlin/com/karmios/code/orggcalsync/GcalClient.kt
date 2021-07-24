@@ -29,7 +29,7 @@ class GcalClient (private val config: Config) {
     private val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
     private val creds = getCredentials(this.httpTransport)
     private val service = getService()
-    private val logger = LogManager.getLogger(GcalClient::class.java)
+    private val logger = LogManager.getLogger(GcalClient::class.java.simpleName)
 
     fun getEvents(startMonthOffset: Long = -1, endMonthOffset: Long = 6): List<Event> {
         val now = LocalDate.now()
@@ -54,21 +54,21 @@ class GcalClient (private val config: Config) {
         }
         logger.info("Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)")
         val calls: List<(BatchRequest) -> String> =
-            changes.create.map { change -> { req: BatchRequest ->
+            changes.create.map { event -> { req: BatchRequest ->
                 service.events()
-                    .insert(config.calendarId, change)
-                    .also { it.queue(req, callback(change.summary, "create")) }
+                    .insert(config.calendarId, event)
+                    .also { it.queue(req, callback(event.summary, "create")) }
                     .httpContent.asString
-            } } + changes.update.map { change -> { req: BatchRequest ->
+            } } + changes.update.map { (id, event) -> { req: BatchRequest ->
                 service.events()
-                    .update(config.calendarId, change.first, change.second)
-                    .also { it.queue(req, callback(change.second.summary, "update")) }
+                    .update(config.calendarId, id, event)
+                    .also { it.queue(req, callback(event.summary, "update")) }
                     .httpContent.asString
-            } } + changes.delete.map { change -> { req: BatchRequest ->
+            } } + changes.delete.map { (id, eventName) -> { req: BatchRequest ->
                 service.events()
-                    .delete(config.calendarId, change)
-                    .also { it.queue(req, callback(change, "delete")) }
-                    .httpContent.asString
+                    .delete(config.calendarId, id)
+                    .also { it.queue(req, callback(id, "delete")) }
+                "[Delete $eventName]"
             } }
 
         calls.chunked(50)

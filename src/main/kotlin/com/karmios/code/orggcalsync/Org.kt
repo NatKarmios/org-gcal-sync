@@ -13,13 +13,13 @@ sealed interface Org {
     val inheritedTags: List<String>
 
     companion object {
-        private val logger = LogManager.getLogger(Org::class.java)
+        private val logger = LogManager.getLogger(Org::class.java.simpleName)
 
         private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
             OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
-                .setTodoKeywords(config.stateKeywords.first.toSet())
-                .setDoneKeywords(config.stateKeywords.second.toSet())
+                .setTodoKeywords(config.stateKeywords.todo.toSet())
+                .setDoneKeywords(config.stateKeywords.done.toSet())
                 .build()
                 .also { logger.info("Reading and parsing org from '$fileName'") }
                 .parse()
@@ -30,7 +30,7 @@ sealed interface Org {
 
     class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
         override val children: List<OrgNodeInTree>
-        private val logger = LogManager.getLogger(OrgRoot::class.java)
+        private val logger = LogManager.getLogger(OrgRoot::class.java.simpleName)
 
         init {
             val children = mutableListOf<OrgNodeInTree>()
@@ -56,7 +56,8 @@ sealed interface Org {
             return OrgEvent.buildListFrom(node, config)
         }
 
-        fun findEvents(config: Config = this.config): List<OrgEvent> = findEventsAt(config.orgEventsPath)
+        fun findEvents(): List<OrgEvent> =
+            findEventsAt(config.orgEventsPath)?.filter { it.shouldBeIncluded(config, logger) }
             ?: throw IllegalArgumentException("Couldn't find event parent node at '${config.orgEventsPath}'!")
     }
 

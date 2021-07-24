@@ -1,9 +1,10 @@
 package com.karmios.code.orggcalsync
 
-import com.orgzly.org.OrgHead
+import com.karmios.code.orggcalsync.Org.OrgNodeInTree
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Calendar
@@ -14,12 +15,37 @@ data class OrgEvent(
     val start: EventDate,
     val end: EventDate?,
     val reminderOffset: Int?,
-    val state: String?
+    val state: String?,
+    val tags: List<String>,
+    val ownTags: List<String>
 ) {
-    companion object {
-        private val logger = LogManager.getLogger(OrgEvent::class.java)
+    fun shouldBeIncluded(config: Config, logger: Logger? = null): Boolean {
+        val tagIntersect = config.ignoreTags.intersect(tags)
+        val ownTagIntersect = config.ignoreOwnTags.intersect(ownTags)
+        return when {
+            config.ignoreTodos && state in config.stateKeywords.todo -> {
+                logger?.debug("Ignoring '$title' because of $state (TODO-like) status")
+                false
+            }
+            tagIntersect.isNotEmpty() -> {
+                val tags = tagIntersect.joinToString(", ")
+                logger?.debug("Ignoring '$title' because tags include $tags")
+                false
+            }
+            ownTagIntersect.isNotEmpty() -> {
+                val tags = ownTagIntersect.joinToString(", ")
+                logger?.debug("Ignoring '$title' because own tags include $tags")
+                false
+            }
+            else -> true
+        }
+    }
 
-        private fun fromOrg(head: OrgHead, ends: Map<String, EventDate>): OrgEvent? {
+    companion object {
+        private val logger = LogManager.getLogger(OrgEvent::class.java.simpleName)
+
+        private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>): OrgEvent? {
+            val head = node.head
             if ("end" in head.tags) return null
             val start = head.scheduled?.startTime
                 ?: return null
@@ -32,23 +58,26 @@ data class OrgEvent(
                         ?.asEventDate
                     ?: ends[head.title.trim()],
                 head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it) },
-                head.state
+                head.state,
+                node.inheritedTags,
+                head.tags.toList()
             )
         }
 
-        private fun buildListFrom(heads: List<OrgHead>): List<OrgEvent> {
-            val ends = heads.mapNotNull { head ->
+        private fun buildListFrom(nodes: List<OrgNodeInTree>): List<OrgEvent> {
+            val ends = nodes.mapNotNull { node ->
+                val head = node.head
                 if ("end" in head.tags) {
                     head.scheduled?.startTime
                         ?.asEventDate
                         ?.let { head.title.trim() to it }
                 } else null
             }.toMap()
-            return heads.mapNotNull { fromOrg(it, ends) }
+            return nodes.mapNotNull { fromOrg(it, ends) }
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
-        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children.map { it.head })
+        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children)
 
         private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
             return when (delay.unit) {

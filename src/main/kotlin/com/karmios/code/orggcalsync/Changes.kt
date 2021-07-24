@@ -6,10 +6,10 @@ import com.google.api.services.calendar.model.Event as GcalEvent
 class Changes private constructor(
     val create: List<GcalEvent>,
     val update: List<Pair<String, GcalEvent>>,
-    val delete: List<String>
+    val delete: List<Pair<String, String>>
 ) {
     companion object {
-        private val logger = LogManager.getLogger(Changes::class.java)
+        private val logger = LogManager.getLogger(Changes::class.java.simpleName)
 
         fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>, config: Config): Changes {
             val create = mutableListOf<GcalEvent>()
@@ -26,7 +26,7 @@ class Changes private constructor(
                         logger.debug("Event '${orgEvent.summary}' is up to date")
                     }
                 } ?: run {
-                    if (!config.createEventsMarkedAsDone && orgEventRaw.state in config.stateKeywords.second)
+                    if (config.createEventsMarkedAsDone || orgEventRaw.state !in config.stateKeywords.done)
                         create.add(orgEvent).also { logger.debug("Will create '${orgEvent.summary}'") }
                 }
             }
@@ -37,7 +37,7 @@ class Changes private constructor(
                 .let { (deleteEvents, inGracePeriod) ->
                     inGracePeriod.forEach { logger.debug("Not deleting '${it.summary}' in grace period") }
                     deleteEvents.onEach { logger.debug("Will delete '${it.summary}'") }
-                        .map { it.id }
+                        .map { it.id to it.summary }
                 }
 
             return Changes(create, update, delete)
