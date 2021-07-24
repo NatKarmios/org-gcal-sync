@@ -8,6 +8,7 @@ data class Config(
     val orgEventsPath: String,
     val calendarId: String,
     val credentialFile: String = "./credentials.json",
+    val flatten: Boolean = false,
     val ignoreTodos: Boolean = false,
     val createEventsMarkedAsDone: Boolean = false,
     private val todoKeywords: String = "TODO WAIT STRT PROJ",

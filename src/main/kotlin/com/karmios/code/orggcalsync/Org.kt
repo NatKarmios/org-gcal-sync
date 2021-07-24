@@ -11,6 +11,7 @@ import java.util.*
 sealed interface Org {
     val children: List<OrgNodeInTree>
     val inheritedTags: List<String>
+    val flattened: List<OrgNodeInTree>
 
     companion object {
         private val logger = LogManager.getLogger(Org::class.java.simpleName)
@@ -42,6 +43,9 @@ sealed interface Org {
         constructor(nodes: List<OrgNode>, config: Config) : this(LinkedList(nodes) as Queue<OrgNode>, config)
 
         override val inheritedTags: List<String> = emptyList()
+
+        override val flattened: List<OrgNodeInTree>
+            get() = children.flatMap { it.flattened }
 
         private fun findNodeAt(path: String) : OrgNodeInTree? {
             var node: OrgNodeInTree? = null
@@ -75,5 +79,8 @@ sealed interface Org {
         override val inheritedTags: List<String> by lazy {
             head.tags + parent.inheritedTags
         }
+
+        override val flattened: List<OrgNodeInTree>
+            get() = listOf(this) + children.flatMap { it.flattened }
     }
 }

@@ -77,7 +77,8 @@ data class OrgEvent(
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
-        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children)
+        fun buildListFrom(tree: Org, config: Config) =
+            buildListFrom(if (config.flatten) tree.flattened else tree.children)
 
         private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
             return when (delay.unit) {
