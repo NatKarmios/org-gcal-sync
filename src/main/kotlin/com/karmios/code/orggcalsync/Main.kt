@@ -39,7 +39,7 @@ fun main(vararg rawArgs: String) {
         logger.info("Done loading gcal events.")
 
         logger.info("Finding differences between org and gcal events...")
-        val changes = Changes.from(orgEvents, gcalEvents)
+        val changes = Changes.from(orgEvents, gcalEvents, config)
         logger.info("Done finding differences between org and gcal events.")
 
         logger.info("Applying changes to gcal...")

@@ -12,8 +12,9 @@ data class OrgEvent(
     val title: String,
     val content: String,
     val start: EventDate,
-    val end: EventDate? = null,
-    val reminderOffset: Int? = null
+    val end: EventDate?,
+    val reminderOffset: Int?,
+    val state: String?
 ) {
     companion object {
         private val logger = LogManager.getLogger(OrgEvent::class.java)
@@ -30,15 +31,12 @@ data class OrgEvent(
                     ?: head.scheduled?.endTime
                         ?.asEventDate
                     ?: ends[head.title.trim()],
-                head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it) }
+                head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it) },
+                head.state
             )
         }
 
-        private fun buildListFrom(allHeads: List<OrgHead>, config: Config): List<OrgEvent> {
-            val heads = if (config.includeDone)
-                allHeads
-            else
-                allHeads.filter { it.state !in config.stateKeywords.second }
+        private fun buildListFrom(heads: List<OrgHead>): List<OrgEvent> {
             val ends = heads.mapNotNull { head ->
                 if ("end" in head.tags) {
                     head.scheduled?.startTime
@@ -50,7 +48,7 @@ data class OrgEvent(
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
-        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children.map { it.head }, config)
+        fun buildListFrom(tree: Org, config: Config) = buildListFrom(tree.children.map { it.head })
 
         private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
             return when (delay.unit) {

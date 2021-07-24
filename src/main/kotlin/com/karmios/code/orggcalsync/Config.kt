@@ -8,9 +8,10 @@ data class Config(
     val orgEventsPath: String,
     val calendarId: String,
     val credentialFile: String = "./credentials.json",
-    val includeDone: Boolean = false,
+    val createEventsMarkedAsDone: Boolean = false,
     private val todoKeywords: String = "TODO WAIT STRT PROJ",
-    private val doneKeywords: String = "DONE KILL"
+    private val doneKeywords: String = "DONE KILL",
+    val deleteGracePeriod: Int = 24
 ) {
     val stateKeywords
         get() = todoKeywords.split(" ") to doneKeywords.split(" ")
