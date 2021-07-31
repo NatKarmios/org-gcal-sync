@@ -22,11 +22,11 @@ sealed interface Org {
                 .setTodoKeywords(config.stateKeywords.todo.toSet())
                 .setDoneKeywords(config.stateKeywords.done.toSet())
                 .build()
-                .also { logger.info("Reading and parsing org from '$fileName'") }
+                .also { logger.debug("Reading and parsing org from '$fileName'") }
                 .parse()
                 .headsInList
 
-        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile, config), config)
+        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile.expanded, config), config)
     }
 
     class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {

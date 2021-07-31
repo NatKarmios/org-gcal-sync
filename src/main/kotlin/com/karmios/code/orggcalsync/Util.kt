@@ -5,8 +5,17 @@ import com.google.api.services.calendar.model.Event as GcalEvent
 import com.google.api.services.calendar.model.EventDateTime
 import com.google.api.services.calendar.model.EventReminder
 import com.orgzly.org.datetime.OrgDateTime
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import org.apache.logging.log4j.core.config.Configurator
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.*
 import java.util.*
+
+import kotlin.text.replaceFirstChar
 
 
 typealias EventDate = Pair<Calendar, Boolean>
@@ -19,8 +28,15 @@ fun Int.clamp(lower: Int, upper: Int): Int = when {
     else -> this
 }
 
+val String.expanded: String
+    get() = if (this.matches("""^~[/\\].+""".toRegex())) {
+        System.getProperty("user.home") + this.substring(1)
+    } else this
+
 val LocalDate.millis: Long
     get() = this.toEpochSecond(LocalTime.MIDNIGHT, ZoneOffset.UTC) * 1000
+
+// <editor-fold desc="Org">
 
 val OrgDateTime.asEventDate: EventDate
     get() = this.calendar to this.hasTime()
@@ -43,6 +59,10 @@ val OrgEvent.asGcal: GcalEvent
             it.overrides = listOfNotNull(reminder)
         }
     }
+
+// </editor-fold>
+
+// <editor-fold desc="Gcal">
 
 fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int): EventDateTime =
     EventDateTime().also {
@@ -80,3 +100,46 @@ infix fun GcalEvent.Reminders?.eq(that: GcalEvent.Reminders?): Boolean {
             && aOverrides.sortedBy { it.minutes }.zip(bOverrides.sortedBy { it.minutes })
         .all { (a, b) -> a.minutes == b.minutes && a.method == b.method }
 }
+
+// </editor-fold>
+
+// <editor-fold desc="Logging / Printing">
+
+class RedirectedPrintStream(ps: PrintStream) : PrintStream(ps) {
+    fun redirectTo(ps: PrintStream?) {
+        redirectTarget = ps
+    }
+
+    fun reset() = redirectTo(null)
+
+    private var redirectTarget: PrintStream? = null
+    override fun write(buf: ByteArray, off: Int, len: Int) {
+        redirectTarget?.write(buf, off, len)
+            ?: super.write(buf, off, len)
+    }
+}
+
+fun setLogLevel(level: Level, out: RedirectedPrintStream): String {
+    val buf = ByteArrayOutputStream()
+    PrintStream(buf, true, UTF_8).use {
+        out.redirectTo(it)
+        Configurator.setAllLevels(LogManager.getRootLogger().name, level)
+        out.reset()
+    }
+    return buf.toString(UTF_8)
+}
+
+fun <T> Logger.traceAction(msg: String, f: () -> T): T {
+    this.trace("${msg.capitalized}...")
+    val result = f()
+    this.trace( "Done $msg.")
+    return result
+}
+
+private val String.capitalized
+    get() = this.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+fun String.indent(n: Int = 2) =
+    this.split(System.lineSeparator()).joinToString(System.lineSeparator()) { " ".repeat(n) + it }
+
+// </editor-fold>

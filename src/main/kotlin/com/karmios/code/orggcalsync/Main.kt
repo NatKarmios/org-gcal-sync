@@ -1,52 +1,47 @@
 package com.karmios.code.orggcalsync
 
-import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.core.LoggerContext
-
-
-fun setLogLevel(level: Level) {
-    val ctx = LogManager.getContext(false) as LoggerContext
-    val cfg = ctx.configuration
-    val rootCfg = cfg.getLoggerConfig(LogManager.ROOT_LOGGER_NAME)
-    rootCfg.level = level
-}
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.nio.charset.StandardCharsets.UTF_8
 
 fun main(vararg rawArgs: String) {
+    val out = RedirectedPrintStream(System.out)
+    val err = RedirectedPrintStream(System.err)
+    System.setOut(out)
+    System.setErr(err)
+
     val args = Args.from(rawArgs)
-    setLogLevel(args.logLevel)
-    val logger = LogManager.getLogger("main")
+    val logLevelMsg = setLogLevel(args.logLevel, out)
+    val logger = LogManager.getLogger("Main")
+    if (logLevelMsg.isNotEmpty())
+        logger.debug(logLevelMsg)
 
     try {
-        logger.info("Loading config...")
-        val config = Config.load(args.configPath)
-        logger.info("Done loading config.")
+        val buf = ByteArrayOutputStream()
+        PrintStream(buf, true, UTF_8).use {
+            err.redirectTo(it)
 
-        logger.info("Loading org data...")
-        val org = Org.load(config)
-        logger.info("Done loading org data.")
+            val config = logger.traceAction("loading config") { Config.load(args.configPath) }
+            val org = logger.traceAction("loading org data") { Org.load(config) }
+            val orgEvents = logger.traceAction("building events from org data") { org.findEvents() }
+            val gcal = logger.traceAction("creating gcal client") { GcalClient(config) }
+            val gcalEvents = logger.traceAction("loading gcal events") { gcal.getEvents() }
+            val changes = logger.traceAction(
+                "finding differences between org and gcal events"
+            ) { Changes.from(orgEvents, gcalEvents, config) }
+            logger.traceAction("applying changes to gcal") { gcal.process(changes, args.dryRun) }
 
-        logger.info("Building events from org data...")
-        val orgEvents = org.findEvents()
-        logger.info("Done building events from org data.")
-
-        logger.info("Creating gcal client...")
-        val gcal = GcalClient(config)
-        logger.info("Done creating gcal client.")
-
-        logger.info("Loading gcal events...")
-        val gcalEvents = gcal.getEvents()
-        logger.info("Done loading gcal events.")
-
-        logger.info("Finding differences between org and gcal events...")
-        val changes = Changes.from(orgEvents, gcalEvents, config)
-        logger.info("Done finding differences between org and gcal events.")
-
-        logger.info("Applying changes to gcal...")
-        gcal.process(changes, args.dryRun)
-        logger.info("Done applying changes to gcal...")
+            err.reset()
+        }
+        val errs = buf.toString(UTF_8)
+        if (errs.isNotEmpty()) {
+            logger.debug("Encountered errors:\n${errs.indent()}")
+        }
     } catch (e: Exception) {
         logger.fatal(e.message ?: "Failed with ${e.javaClass.name}!")
+        if (!logger.isDebugEnabled)
+            logger.fatal("Run with higher verbosity for more info.")
         logger.debug(e.stackTraceToString())
     }
 }

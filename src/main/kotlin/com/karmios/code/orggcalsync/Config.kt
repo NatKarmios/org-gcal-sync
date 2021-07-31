@@ -24,6 +24,6 @@ data class Config(
     }
 
     companion object {
-        fun load(fileName: String) = ConfigLoader().loadConfigOrThrow<Config>(File(fileName))
+        fun load(fileName: String) = ConfigLoader().loadConfigOrThrow<Config>(File(fileName.expanded))
     }
 }
