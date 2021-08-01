@@ -19,8 +19,8 @@ sealed interface Org {
         private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
             OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
-                .setTodoKeywords(config.stateKeywords.todo.toSet())
-                .setDoneKeywords(config.stateKeywords.done.toSet())
+                .setTodoKeywords(config.todoKeywords.toSet())
+                .setDoneKeywords(config.doneKeywords.toSet())
                 .build()
                 .also { logger.debug("Reading and parsing org from '$fileName'") }
                 .parse()

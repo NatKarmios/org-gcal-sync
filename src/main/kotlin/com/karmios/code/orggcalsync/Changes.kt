@@ -26,7 +26,7 @@ class Changes private constructor(
                         logger.debug("Event '${orgEvent.summary}' is up to date")
                     }
                 } ?: run {
-                    if (config.createEventsMarkedAsDone || orgEventRaw.state !in config.stateKeywords.done)
+                    if (config.createEventsMarkedAsDone || orgEventRaw.state !in config.doneKeywords)
                         create.add(orgEvent).also { logger.debug("Will create '${orgEvent.summary}'") }
                 }
             }

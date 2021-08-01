@@ -19,22 +19,32 @@ data class OrgEvent(
     val tags: List<String>,
     val ownTags: List<String>
 ) {
-    fun shouldBeIncluded(config: Config, logger: Logger? = null): Boolean {
-        val tagIntersect = config.ignoreTags.intersect(tags)
-        val ownTagIntersect = config.ignoreOwnTags.intersect(ownTags)
+    fun shouldBeIncluded(config: Config, logger: Logger? = null): Boolean = with(config) {
+        val ignoreTagIntersect = ignoreTags.intersect(tags)
+        val ignoreOwnTagIntersect = ignoreOwnTags.intersect(ownTags)
         return when {
-            config.ignoreTodos && state in config.stateKeywords.todo -> {
+            ignoreTodos && state in todoKeywords -> {
                 logger?.debug("Ignoring '$title' because of $state (TODO-like) status")
                 false
             }
-            tagIntersect.isNotEmpty() -> {
-                val tags = tagIntersect.joinToString(", ")
+            ignoreTagIntersect.isNotEmpty() -> {
+                val tags = ignoreTagIntersect.joinToString(", ")
                 logger?.debug("Ignoring '$title' because tags include $tags")
                 false
             }
-            ownTagIntersect.isNotEmpty() -> {
-                val tags = ownTagIntersect.joinToString(", ")
+            ignoreOwnTagIntersect.isNotEmpty() -> {
+                val tags = ignoreOwnTagIntersect.joinToString(", ")
                 logger?.debug("Ignoring '$title' because own tags include $tags")
+                false
+            }
+            includeTags.isNotEmpty() && includeTags.intersect(tags).isEmpty() -> {
+                val tags = (if (includeTags.size > 1) "any of " else "") + includeTags.joinToString(", ")
+                logger?.debug("Ignoring '$title' because tags don't include $tags")
+                false
+            }
+            includeOwnTags.isNotEmpty() && includeOwnTags.intersect(ownTags).isEmpty() -> {
+                val tags = (if (includeOwnTags.size > 1) "any of " else "") + includeOwnTags.joinToString(", ")
+                logger?.debug("Ignoring '$title' because own tags don't include $tags")
                 false
             }
             else -> true

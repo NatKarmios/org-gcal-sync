@@ -75,7 +75,7 @@ fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int): EventDateTime 
 
 val GcalEvent.endMillis: Long
     get() = this.end.dateTime?.value
-        ?: this.end.date.value + HOUR * 24
+        ?: this.end.date.value
 
 infix fun GcalEvent?.eq(that: GcalEvent?): Boolean {
     if (this == null && that == null) return true

@@ -113,7 +113,7 @@ class GcalClient (private val config: Config) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val file = File(config.credentialFile)
+        val file = File(config.credentialFile.expanded)
         if (!file.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
         val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, file.reader())
 
