@@ -25,12 +25,25 @@ import java.io.*
 import java.time.LocalDate
 
 
+/**
+ * Google Calendar client
+ *
+ * @property config Configuration
+ * @constructor
+ */
 class GcalClient (private val config: Config) {
     private val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
     private val creds = getCredentials(this.httpTransport)
     private val service = getService()
     private val logger = LogManager.getLogger(GcalClient::class.java.simpleName)
 
+    /**
+     * Gets a list of events from Google Calendar
+     *
+     * @param startMonthOffset Lower bound (in months from now) for event times
+     * @param endMonthOffset Upper bound (in months from now) for event times
+     * @return The retrieved list of events
+     */
     fun getEvents(startMonthOffset: Long = -1, endMonthOffset: Long = 6): List<Event> {
         val now = LocalDate.now()
         val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
@@ -46,6 +59,12 @@ class GcalClient (private val config: Config) {
             .also { logger.debug("Found Gcal events: " + it.joinToString(", ") { e -> e.summary }) }
     }
 
+    /**
+     * Sends a set of changes to Google Calendar
+     *
+     * @param changes The changes to send
+     * @param dryRun Whether this is a dry run
+     */
     fun process(changes: Changes, dryRun: Boolean = false) {
         val sizes = with(changes) { listOf(create, update, delete) }.map { it.size }
         if (sizes.all { it == 0 }) {

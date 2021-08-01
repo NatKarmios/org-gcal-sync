@@ -3,6 +3,13 @@ package com.karmios.code.orggcalsync
 import org.apache.logging.log4j.LogManager
 import com.google.api.services.calendar.model.Event as GcalEvent
 
+/**
+ * Changes
+ *
+ * @property create List of event data to be created as Google calendar events
+ * @property update List of Google event IDs with relevant update data
+ * @property delete List of Google event IDs to be deleted
+ */
 class Changes private constructor(
     val create: List<GcalEvent>,
     val update: List<Pair<String, GcalEvent>>,
@@ -11,6 +18,14 @@ class Changes private constructor(
     companion object {
         private val logger = LogManager.getLogger(Changes::class.java.simpleName)
 
+        /**
+         * Creates a Changes object from org-mode and Google Calendar events
+         *
+         * @param orgEvents org-mode events
+         * @param gcalEvents Google Calendar events
+         * @param config Configuration
+         * @return Newly-created Changes object
+         */
         fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>, config: Config): Changes {
             val create = mutableListOf<GcalEvent>()
             val update = mutableListOf<Pair<String, GcalEvent>>()

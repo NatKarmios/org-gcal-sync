@@ -8,9 +8,23 @@ import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.util.*
 
+/**
+ * A node in an tree representing an org-mode document
+ */
 sealed interface Org {
+    /**
+     * This node's direct children
+     */
     val children: List<OrgNodeInTree>
+
+    /**
+     * This node's tags and those of all its ancestors
+     */
     val inheritedTags: List<String>
+
+    /**
+     * This node and all its descendants, flattened into a list
+     */
     val flattened: List<OrgNodeInTree>
 
     companion object {
@@ -26,9 +40,18 @@ sealed interface Org {
                 .parse()
                 .headsInList
 
+        /**
+         * Creates a tree from an org-mode file
+         *
+         * @param config Configuration
+         * @return The newly-created tree
+         */
         fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile.expanded, config), config)
     }
 
+    /**
+     * The root of an org-mode document
+     */
     class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
         override val children: List<OrgNodeInTree>
         private val logger = LogManager.getLogger(OrgRoot::class.java.simpleName)
@@ -60,11 +83,20 @@ sealed interface Org {
             return OrgEvent.buildListFrom(node, config)
         }
 
+        /**
+         * @return A list of events from org-mode according to the config
+         */
         fun findEvents(): List<OrgEvent> =
             findEventsAt(config.orgEventsPath)?.filter { it.shouldBeIncluded(config, logger) }
             ?: throw IllegalArgumentException("Couldn't find event parent node at '${config.orgEventsPath}'!")
     }
 
+    /**
+     * A (non-root) node in an org-mode tree
+     *
+     * @property parent
+     * @property head The org-mode headline data at this location
+     */
     class OrgNodeInTree (node: OrgNode, nodes: Queue<OrgNode>, private val parent: Org) : Org {
         val head: OrgHead = node.head
         override val children: List<OrgNodeInTree>

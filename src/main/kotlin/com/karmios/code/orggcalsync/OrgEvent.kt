@@ -9,6 +9,19 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Calendar
 
+/**
+ * Org event
+ *
+ * @property title Event title
+ * @property content Event details
+ * @property start Event start time
+ * @property end Event end time
+ * @property reminderOffset Offset (in minutes) from the start time for reminders
+ * @property state Event's state, as configured with todoKeywords / doneKeywords
+ * @property tags List of event's tags, including inherited
+ * @property ownTags List of event's tags, not including inherited
+ * @constructor
+ */
 data class OrgEvent(
     val title: String,
     val content: String,
@@ -19,32 +32,36 @@ data class OrgEvent(
     val tags: List<String>,
     val ownTags: List<String>
 ) {
-    fun shouldBeIncluded(config: Config, logger: Logger? = null): Boolean = with(config) {
+    /**
+     * @param config Configuration
+     * @return Whether this event should be considered when processing changes
+     */
+    fun shouldBeIncluded(config: Config): Boolean = with(config) {
         val ignoreTagIntersect = ignoreTags.intersect(tags)
         val ignoreOwnTagIntersect = ignoreOwnTags.intersect(ownTags)
         return when {
             ignoreTodos && state in todoKeywords -> {
-                logger?.debug("Ignoring '$title' because of $state (TODO-like) status")
+                logger.debug("Ignoring '$title' because of $state (TODO-like) status")
                 false
             }
             ignoreTagIntersect.isNotEmpty() -> {
                 val tags = ignoreTagIntersect.joinToString(", ")
-                logger?.debug("Ignoring '$title' because tags include $tags")
+                logger.debug("Ignoring '$title' because tags include $tags")
                 false
             }
             ignoreOwnTagIntersect.isNotEmpty() -> {
                 val tags = ignoreOwnTagIntersect.joinToString(", ")
-                logger?.debug("Ignoring '$title' because own tags include $tags")
+                logger.debug("Ignoring '$title' because own tags include $tags")
                 false
             }
             includeTags.isNotEmpty() && includeTags.intersect(tags).isEmpty() -> {
                 val tags = (if (includeTags.size > 1) "any of " else "") + includeTags.joinToString(", ")
-                logger?.debug("Ignoring '$title' because tags don't include $tags")
+                logger.debug("Ignoring '$title' because tags don't include $tags")
                 false
             }
             includeOwnTags.isNotEmpty() && includeOwnTags.intersect(ownTags).isEmpty() -> {
                 val tags = (if (includeOwnTags.size > 1) "any of " else "") + includeOwnTags.joinToString(", ")
-                logger?.debug("Ignoring '$title' because own tags don't include $tags")
+                logger.debug("Ignoring '$title' because own tags don't include $tags")
                 false
             }
             else -> true
@@ -87,9 +104,22 @@ data class OrgEvent(
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
+        /**
+         * Builds a list of events from an org-mode tree
+         *
+         * @param tree An org tree
+         * @param config Configuration
+         */
         fun buildListFrom(tree: Org, config: Config) =
             buildListFrom(if (config.flatten) tree.flattened else tree.children)
 
+        /**
+         * Gets the reminder delay of an event, in minutes, if it exists
+         *
+         * @param time The event's start time
+         * @param delay The reminder delay, in org-mode format
+         * @return The reminder delay in minutes
+         */
         private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
             return when (delay.unit) {
                 OrgInterval.Unit.HOUR -> delay.value * 60
