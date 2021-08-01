@@ -30,7 +30,7 @@ fun main(vararg rawArgs: String) {
             val changes = logger.traceAction(
                 "finding differences between org and gcal events"
             ) { Changes.from(orgEvents, gcalEvents, config) }
-            logger.traceAction("applying changes to gcal") { gcal.process(changes, args.dryRun) }
+            logger.traceAction("applying changes to gcal") { gcal.process(changes, args.dry) }
 
             err.reset()
         }

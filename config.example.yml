@@ -7,11 +7,10 @@ orgFile: "~/path/to/file.org"
 calendarId: "your-calendar-id@group.calendar.google.com"
 
 
-# === Optional fields - default values are shown here ===
+# === Optional fields; default values are shown here ===
 
 # The path of the headline whose children represent events
-# Defaults to the root of the org document
-orgEventsPath: ""
+orgEventsPath: ""  # "" represents the root of the org document
 
 # The path to your Google API credentials; get this from your admin console
 credentialFile: "./credentials.json"
@@ -26,8 +25,7 @@ doneKeywords:
   - "DONE"
   - "KILL"
 
-# If true, considers all descendants of the headline,
-# instead of just direct children
+# If true, considers all descendants of the headline, instead of just direct children
 flatten: false
 
 # List of tags to be included; if empty, tags are unrestricted

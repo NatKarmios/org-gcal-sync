@@ -20,10 +20,10 @@ class Args private constructor() {
             ?.let { Level.values().sortedBy { it.intLevel() }.find { l -> l.intLevel() >= it }!! }
             ?: DEFAULT_LOG_LEVEL
 
-    val dryRun by parser.option(
+    val dry by parser.option(
         ArgType.Boolean,
         shortName="d",
-        description="If present, skip sending event changes to Google"
+        description="Skip sending event changes to Google"
     ).default(false)
     val configPath by parser.option(
         ArgType.String,
