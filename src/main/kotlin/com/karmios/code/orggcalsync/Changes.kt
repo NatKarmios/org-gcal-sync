@@ -1,61 +1,61 @@
 package com.karmios.code.orggcalsync
 
-import com.google.api.client.util.DateTime
-import com.google.api.services.calendar.model.EventDateTime
-import com.google.api.services.calendar.model.EventReminder
+import org.apache.logging.log4j.LogManager
 import com.google.api.services.calendar.model.Event as GcalEvent
 
+/**
+ * Changes
+ *
+ * @property create List of event data to be created as Google calendar events
+ * @property update List of Google event IDs with relevant update data
+ * @property delete List of Google event IDs to be deleted
+ */
 class Changes private constructor(
     val create: List<GcalEvent>,
     val update: List<Pair<String, GcalEvent>>,
-    val delete: List<String>
+    val delete: List<Pair<String, String>>
 ) {
     companion object {
-        private const val HOUR = 60*60*1000
+        private val logger = LogManager.getLogger(Changes::class.java.simpleName)
 
-        fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>): Changes {
+        /**
+         * Creates a Changes object from org-mode and Google Calendar events
+         *
+         * @param orgEvents org-mode events
+         * @param gcalEvents Google Calendar events
+         * @param config Configuration
+         * @return Newly-created Changes object
+         */
+        fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>, config: Config): Changes {
             val create = mutableListOf<GcalEvent>()
             val update = mutableListOf<Pair<String, GcalEvent>>()
 
             val unusedGcalEvents = gcalEvents.toMutableList()
-            for (orgEvent in orgEvents) {
-                gcalEvents.find { it.summary.trim() == orgEvent.title.trim() }?.also { gcalEvent ->
+            for ((orgEventRaw, orgEvent) in orgEvents.map { it to it.asGcal }) {
+                gcalEvents.find { it.summary == orgEvent.summary }?.also { gcalEvent ->
                     unusedGcalEvents.remove(gcalEvent)
-                    update.add(gcalEvent.id to orgEvent.asGcal)
-                } ?: create.add(orgEvent.asGcal)
+                    if (!(orgEvent eq gcalEvent)) {
+                        update.add(gcalEvent.id to orgEvent)
+                        logger.debug("Will update '${orgEvent.summary}'")
+                    } else {
+                        logger.debug("Event '${orgEvent.summary}' is up to date")
+                    }
+                } ?: run {
+                    if (config.createEventsMarkedAsDone || orgEventRaw.state !in config.doneKeywords)
+                        create.add(orgEvent).also { logger.debug("Will create '${orgEvent.summary}'") }
+                }
             }
-            val delete = unusedGcalEvents.map { it.id }
+            val now = System.currentTimeMillis()
+            val endThresh = now + config.deleteGracePeriod * HOUR
+            val delete = unusedGcalEvents
+                .partition { endThresh < it.endMillis }
+                .let { (deleteEvents, inGracePeriod) ->
+                    inGracePeriod.forEach { logger.debug("Not deleting '${it.summary}' in grace period") }
+                    deleteEvents.onEach { logger.debug("Will delete '${it.summary}'") }
+                        .map { it.id to it.summary }
+                }
 
             return Changes(create, update, delete)
         }
-
-        private fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int): EventDateTime =
-            EventDateTime().also {
-                val (date, hasTime) = this
-                if (hasTime)
-                    it.dateTime = DateTime(date.timeInMillis + shiftIfDateTime * HOUR)
-                else
-                    it.date = DateTime(true, date.timeInMillis + shiftIfDate * HOUR, null)
-            }
-
-        private val OrgEvent.asGcal: GcalEvent
-            get() = GcalEvent().also { event ->
-                event.summary = this.title
-                event.description = this.content
-                event.start = this.start.toGcalDate(0, 12)
-                event.end = this.end?.toGcalDate(0, 36)
-                    ?: this.start.toGcalDate(1, 36)
-                event.reminders = GcalEvent.Reminders().also {
-                    it.useDefault = false
-                    val reminder = this.reminderOffset?.let { offset ->
-                        EventReminder().also { reminder ->
-                            reminder.method = "popup"
-                            reminder.minutes = offset
-                        }
-                    }
-                    it.overrides = listOfNotNull(reminder)
-                }
-            }
     }
 }
-

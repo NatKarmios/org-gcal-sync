@@ -1,22 +1,47 @@
 package com.karmios.code.orggcalsync
 
-import kotlin.system.exitProcess
+import org.apache.logging.log4j.LogManager
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.nio.charset.StandardCharsets.UTF_8
 
+fun main(vararg rawArgs: String) {
+    val out = RedirectedPrintStream(System.out)
+    val err = RedirectedPrintStream(System.err)
+    System.setOut(out)
+    System.setErr(err)
 
-fun main(vararg args: String) {
-    val (FILE_NAME, ORG_TREE_PATH, CALENDAR_ID) = getArgs(args)
-    val org = Org.loadFrom(FILE_NAME)
-    val orgEvents = org.findEventsAt(ORG_TREE_PATH) ?: exitProcess(1)
-    val gcal = GcalClient(CALENDAR_ID)
-    val gcalEvents = gcal.getEvents()
-    val changes = Changes.from(orgEvents, gcalEvents)
-    gcal.process(changes)
-}
+    val args = Args.from(rawArgs)
+    val logLevelMsg = setLogLevel(args.logLevel, out)
+    val logger = LogManager.getLogger("Main")
+    if (logLevelMsg.isNotEmpty())
+        logger.debug(logLevelMsg)
 
-fun getArgs(args: Array<out String>): Triple<String, String, String> =
     try {
-        Triple(args[0], args[1], args[2])
-    } catch (e: ArrayIndexOutOfBoundsException) {
-        println("Too few arguments")
-        exitProcess(1)
+        val buf = ByteArrayOutputStream()
+        PrintStream(buf, true, UTF_8).use {
+            err.redirectTo(it)
+
+            val config = logger.traceAction("loading config") { Config.load(args.configPath) }
+            val org = logger.traceAction("loading org data") { Org.load(config) }
+            val orgEvents = logger.traceAction("building events from org data") { org.findEvents() }
+            val gcal = logger.traceAction("creating gcal client") { GcalClient(config) }
+            val gcalEvents = logger.traceAction("loading gcal events") { gcal.getEvents() }
+            val changes = logger.traceAction(
+                "finding differences between org and gcal events"
+            ) { Changes.from(orgEvents, gcalEvents, config) }
+            logger.traceAction("applying changes to gcal") { gcal.process(changes, args.dry) }
+
+            err.reset()
+        }
+        val errs = buf.toString(UTF_8)
+        if (errs.isNotEmpty()) {
+            logger.debug("Encountered errors:\n${errs.indent()}")
+        }
+    } catch (e: Exception) {
+        logger.fatal(e.message ?: "Failed with ${e.javaClass.name}!")
+        if (!logger.isDebugEnabled)
+            logger.fatal("Run with higher verbosity for more info.")
+        logger.debug(e.stackTraceToString())
     }
+}

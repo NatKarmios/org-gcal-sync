@@ -9,6 +9,7 @@ import com.google.api.client.googleapis.batch.BatchRequest
 import com.google.api.client.googleapis.batch.json.JsonBatchCallback
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonError
+import com.google.api.client.http.HttpContent
 import com.google.api.client.http.HttpHeaders
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.JsonFactory
@@ -19,22 +20,35 @@ import com.google.api.services.calendar.Calendar
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.Events
+import org.apache.logging.log4j.LogManager
 import java.io.*
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneOffset
 
 
-class GcalClient(private val calendarId: String) {
+/**
+ * Google Calendar client
+ *
+ * @property config Configuration
+ * @constructor
+ */
+class GcalClient (private val config: Config) {
     private val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
     private val creds = getCredentials(this.httpTransport)
     private val service = getService()
+    private val logger = LogManager.getLogger(GcalClient::class.java.simpleName)
 
-    fun getEvents(startMonthOffset: Long = -2, endMonthOffset: Long = 6): List<Event> {
+    /**
+     * Gets a list of events from Google Calendar
+     *
+     * @param startMonthOffset Lower bound (in months from now) for event times
+     * @param endMonthOffset Upper bound (in months from now) for event times
+     * @return The retrieved list of events
+     */
+    fun getEvents(startMonthOffset: Long = -1, endMonthOffset: Long = 6): List<Event> {
         val now = LocalDate.now()
-        val rangeStart = now.plusMonths(startMonthOffset)
+        val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
         val rangeEnd = now.plusMonths(endMonthOffset)
-        val events: Events = service.events().list(calendarId)
+        val events: Events = service.events().list(config.calendarId)
             .setMaxResults(1000)
             .setTimeMin(DateTime(rangeStart.millis))
             .setTimeMax(DateTime(rangeEnd.millis))
@@ -42,34 +56,53 @@ class GcalClient(private val calendarId: String) {
             .setSingleEvents(true)
             .execute()
         return events.items
+            .also { logger.debug("Found Gcal events: " + it.joinToString(", ") { e -> e.summary }) }
     }
 
-    fun process(changes: Changes) {
-        println("Create: ${changes.create.size}")
-        println("Update: ${changes.update.size}")
-        println("Delete: ${changes.delete.size}")
-        val calls: List<(BatchRequest) -> Unit> =
-            changes.create.map { { req: BatchRequest ->
-                val r = service.events()
-                    .insert(calendarId, it)
-                r.queue(req, callback(it.summary, "create"))
-            } } + changes.update.map { { req: BatchRequest ->
-                val r = service.events()
-                    .update(calendarId, it.first, it.second)
-                r.queue(req, callback(it.second.summary, "update"))
-                r.httpContent.writeTo(System.out)
-                println()
-            } } + changes.delete.map { { req: BatchRequest ->
+    /**
+     * Sends a set of changes to Google Calendar
+     *
+     * @param changes The changes to send
+     * @param dryRun Whether this is a dry run
+     */
+    fun process(changes: Changes, dryRun: Boolean = false) {
+        val sizes = with(changes) { listOf(create, update, delete) }.map { it.size }
+        if (sizes.all { it == 0 }) {
+            logger.info("No changes to process!")
+            return
+        }
+        logger.info("Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)")
+        val calls: List<(BatchRequest) -> String> =
+            changes.create.map { event -> { req: BatchRequest ->
                 service.events()
-                    .delete(calendarId, it)
-                    .queue(req, callback(it, "delete"))
+                    .insert(config.calendarId, event)
+                    .also { it.queue(req, callback(event.summary, "create")) }
+                    .httpContent.asString
+            } } + changes.update.map { (id, event) -> { req: BatchRequest ->
+                service.events()
+                    .update(config.calendarId, id, event)
+                    .also { it.queue(req, callback(event.summary, "update")) }
+                    .httpContent.asString
+            } } + changes.delete.map { (id, eventName) -> { req: BatchRequest ->
+                service.events()
+                    .delete(config.calendarId, id)
+                    .also { it.queue(req, callback(id, "delete")) }
+                "[Delete $eventName]"
             } }
 
-        calls.chunked(50).forEach { callChunk ->
-            val req = service.batch()
-            callChunk.forEach { it(req) }
-            println("Skipping execute!")  // req.execute()
-        }
+        calls.chunked(50)
+            .also { logger.debug("Sending ${it.size} batch requests") }
+            .forEach { callChunk ->
+                val req = service.batch()
+                callChunk.forEach {
+                    val reqContent = it(req)
+                    logger.trace("Queueing change: $reqContent")
+                }
+                if (dryRun)
+                    logger.warn("Dry run - skipping Gcal execute!")
+                else
+                    req.execute()
+            }
     }
 
     // <editor-fold desc="Boilerplate">
@@ -79,7 +112,13 @@ class GcalClient(private val calendarId: String) {
         private val JSON_FACTORY: JsonFactory = JacksonFactory.getDefaultInstance()
         private const val TOKENS_DIRECTORY_PATH = "tokens"
         private val SCOPES = listOf(CalendarScopes.CALENDAR)
-        private const val CREDENTIALS_FILE_PATH = "/credentials.json"
+
+        private val HttpContent.asString: String
+            get() {
+                val stream = ByteArrayOutputStream()
+                this.writeTo(stream)
+                return stream.toString()
+            }
 
         private fun <T>callback(name: String, action: String): JsonBatchCallback<T> = object : JsonBatchCallback<T>() {
             override fun onSuccess(t: T?, responseHeaders: HttpHeaders?) {}
@@ -93,9 +132,9 @@ class GcalClient(private val calendarId: String) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val `in` = GcalClient::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
-            ?: throw FileNotFoundException("Resource not found: $CREDENTIALS_FILE_PATH")
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, InputStreamReader(`in`))
+        val file = File(config.credentialFile.expanded)
+        if (!file.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, file.reader())
 
         // Build flow and trigger user authorization request.
         val flow = GoogleAuthorizationCodeFlow.Builder(

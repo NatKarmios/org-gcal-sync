@@ -2,28 +2,59 @@ package com.karmios.code.orggcalsync
 
 import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
+import com.orgzly.org.parser.OrgNodeInList
 import com.orgzly.org.parser.OrgParser
+import org.apache.logging.log4j.LogManager
 import java.io.File
 import java.util.*
 
+/**
+ * A node in an tree representing an org-mode document
+ */
 sealed interface Org {
+    /**
+     * This node's direct children
+     */
     val children: List<OrgNodeInTree>
+
+    /**
+     * This node's tags and those of all its ancestors
+     */
     val inheritedTags: List<String>
 
+    /**
+     * This node and all its descendants, flattened into a list
+     */
+    val flattened: List<OrgNodeInTree>
+
     companion object {
-        fun loadFrom(fileName: String): OrgRoot {
-            val org = OrgParser.Builder()
+        private val logger = LogManager.getLogger(Org::class.java.simpleName)
+
+        private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
+            OrgParser.Builder()
                 .setInput(File(fileName).bufferedReader())
-                .setTodoKeywords(setOf("TODO", "WAIT", "PROJ", "STRT"))
-                .setDoneKeywords(setOf("DONE", "KILL"))
+                .setTodoKeywords(config.todoKeywords.toSet())
+                .setDoneKeywords(config.doneKeywords.toSet())
                 .build()
+                .also { logger.debug("Reading and parsing org from '$fileName'") }
                 .parse()
-            return OrgRoot(org.headsInList)
-        }
+                .headsInList
+
+        /**
+         * Creates a tree from an org-mode file
+         *
+         * @param config Configuration
+         * @return The newly-created tree
+         */
+        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile.expanded, config), config)
     }
 
-    class OrgRoot private constructor(nodes: Queue<OrgNode>) : Org {
+    /**
+     * The root of an org-mode document
+     */
+    class OrgRoot private constructor(nodes: Queue<OrgNode>, private val config: Config) : Org {
         override val children: List<OrgNodeInTree>
+        private val logger = LogManager.getLogger(OrgRoot::class.java.simpleName)
 
         init {
             val children = mutableListOf<OrgNodeInTree>()
@@ -32,9 +63,12 @@ sealed interface Org {
             this.children = children
         }
 
-        constructor(nodes: List<OrgNode>) : this(LinkedList(nodes) as Queue<OrgNode>)
+        constructor(nodes: List<OrgNode>, config: Config) : this(LinkedList(nodes) as Queue<OrgNode>, config)
 
         override val inheritedTags: List<String> = emptyList()
+
+        override val flattened: List<OrgNodeInTree>
+            get() = children.flatMap { it.flattened }
 
         private fun findNodeAt(path: String) : OrgNodeInTree? {
             var node: OrgNodeInTree? = null
@@ -43,12 +77,26 @@ sealed interface Org {
             return node
         }
 
-        fun findEventsAt(path: String) : List<OrgEvent>? {
+        private fun findEventsAt(path: String) : List<OrgEvent>? {
+            logger.debug("Finding event headlines at '$path'")
             val node = findNodeAt(path) ?: return null
-            return OrgEvent.buildListFrom(node)
+            return OrgEvent.buildListFrom(node, config)
         }
+
+        /**
+         * @return A list of events from org-mode according to the config
+         */
+        fun findEvents(): List<OrgEvent> =
+            findEventsAt(config.orgEventsPath)?.filter { it.shouldBeIncluded(config, logger) }
+            ?: throw IllegalArgumentException("Couldn't find event parent node at '${config.orgEventsPath}'!")
     }
 
+    /**
+     * A (non-root) node in an org-mode tree
+     *
+     * @property parent
+     * @property head The org-mode headline data at this location
+     */
     class OrgNodeInTree (node: OrgNode, nodes: Queue<OrgNode>, private val parent: Org) : Org {
         val head: OrgHead = node.head
         override val children: List<OrgNodeInTree>
@@ -63,5 +111,8 @@ sealed interface Org {
         override val inheritedTags: List<String> by lazy {
             head.tags + parent.inheritedTags
         }
+
+        override val flattened: List<OrgNodeInTree>
+            get() = listOf(this) + children.flatMap { it.flattened }
     }
 }

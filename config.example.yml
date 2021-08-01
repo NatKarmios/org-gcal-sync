@@ -1,0 +1,51 @@
+# === Required fields ===
+
+# The path to your org file
+orgFile: "~/path/to/file.org"
+
+# The ID for the Google calendar to be affected
+calendarId: "your-calendar-id@group.calendar.google.com"
+
+
+# === Optional fields; default values are shown here ===
+
+# The path of the headline whose children represent events
+orgEventsPath: ""  # "" represents the root of the org document
+
+# The path to your Google API credentials; get this from your admin console
+credentialFile: "./credentials.json"
+
+# The keywords for to-do and done tasks respectively
+todoKeywords:
+  - "TODO"
+  - "WAIT"
+  - "STRT"
+  - "PROJ"
+doneKeywords:
+  - "DONE"
+  - "KILL"
+
+# If true, considers all descendants of the headline, instead of just direct children
+flatten: false
+
+# List of tags to be included; if empty, tags are unrestricted
+# includeTags considers inherited tags, includeOwnTags does not
+includeTags:  # empty
+includeOwnTags:  # empty
+
+# List of tags to be ignored
+# ignoreTags considers inherited tags, ignoreOwnTags does not
+ignoreTags:  # empty
+ignoreOwnTags:  # empty
+
+# If true, ignores any headlines marked with a keyword in todoKeywords
+ignoreTodos: false
+
+# If false, events marked with a keyword in doneKeywords won't be created
+# if they don't already exist in the calendar; existing events will still be updated
+createEventsMarkedAsDone: false
+
+# The maximum amount of time (in hours) between now and an event's end time for which
+# an event can be removed from the org file *without* being deleted from the calendar.
+# Useful if you remove/archive an event on the day but want it to remain in the calendar.
+deleteGracePeriod: 24
