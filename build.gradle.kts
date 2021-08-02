@@ -9,14 +9,14 @@ plugins {
 }
 
 group = "com.karmios.code"
-version = "0.1"
+version = "1.0"
 
 tasks.named<ShadowJar>("shadowJar") {
     outputs.upToDateWhen { false }
 
     group = "Build"
     description = "Creates a fat jar"
-    archiveFileName.set("org-gcal-sync-fat.jar")
+    archiveFileName.set("org-gcal-sync_${project.version}.jar")
 
     from(sourceSets.main.map { it.output })
     from(project.configurations.runtimeClasspath)

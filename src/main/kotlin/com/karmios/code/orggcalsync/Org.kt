@@ -87,7 +87,7 @@ sealed interface Org {
          * @return A list of events from org-mode according to the config
          */
         fun findEvents(): List<OrgEvent> =
-            findEventsAt(config.orgEventsPath)?.filter { it.shouldBeIncluded(config, logger) }
+            findEventsAt(config.orgEventsPath)?.filter { it.shouldBeIncluded(config) }
             ?: throw IllegalArgumentException("Couldn't find event parent node at '${config.orgEventsPath}'!")
     }
 
