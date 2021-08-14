@@ -31,8 +31,12 @@ class Changes private constructor(
             val update = mutableListOf<Pair<String, GcalEvent>>()
 
             val unusedGcalEvents = gcalEvents.toMutableList()
-            for ((orgEventRaw, orgEvent) in orgEvents.map { it to it.asGcal }) {
-                gcalEvents.find { it.summary == orgEvent.summary }?.also { gcalEvent ->
+            val sortedGcalEvents = gcalEvents.sortedByDescending { (it.start.date ?: it.start.dateTime!!).value }
+
+            for ((orgEventRaw, orgEvent) in orgEvents.sortedByDescending { it.start.first }.map { it to it.asGcal }) {
+                sortedGcalEvents.find {
+                    it.summary == orgEvent.summary && it in unusedGcalEvents
+                }?.also { gcalEvent ->
                     unusedGcalEvents.remove(gcalEvent)
                     if (!(orgEvent eq gcalEvent)) {
                         update.add(gcalEvent.id to orgEvent)

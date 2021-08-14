@@ -1,7 +1,9 @@
 package com.karmios.code.orggcalsync
 
+import com.google.api.client.auth.oauth2.TokenResponseException
 import org.apache.logging.log4j.LogManager
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
 
@@ -37,6 +39,13 @@ fun main(vararg rawArgs: String) {
         val errs = buf.toString(UTF_8)
         if (errs.isNotEmpty()) {
             logger.debug("Encountered errors:\n${errs.indent()}")
+        }
+    } catch (e: TokenResponseException) {
+        if (args.autoRetry && File("./tokens").deleteRecursively()) {
+            logger.info("Google auth tokens are invalid/expired - deleting and restarting.")
+            main(*rawArgs)
+        } else {
+            logger.fatal("Google auth tokens are invalid/expired - can't continue!")
         }
     } catch (e: Exception) {
         logger.fatal(e.message ?: "Failed with ${e.javaClass.name}!")

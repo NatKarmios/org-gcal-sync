@@ -113,10 +113,16 @@ infix fun GcalEvent?.eq(that: GcalEvent?): Boolean {
 
     return this.summary ?: "" == that.summary ?: ""
             && this.description ?: "" == that.description ?: ""
-            && (this.start?.date == that.start?.date || this.start?.dateTime == that.start?.dateTime)
-            && (this.end?.date == that.end?.date || this.end?.dateTime == that.end?.dateTime)
+            && this.start.display == that.start.display
+            && this.end.display == that.end.display
             && this.reminders eq that.reminders
 }
+
+/**
+ * Clean string representation of an EventDateTime - used for easy equality check
+ */
+val EventDateTime.display: String
+    get() = (this.date ?: this.dateTime!!).toString()
 
 /**
  * Deep equality based on org-relevant fields
