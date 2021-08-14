@@ -45,8 +45,8 @@ val String.expanded
 /**
  * The given date, converted to milliseconds since epoch
  */
-val LocalDate.millis
-    get() = this.toEpochSecond(LocalTime.MIDNIGHT, ZoneOffset.UTC) * 1000
+fun LocalDate.toMillis(zoneOffset: ZoneOffset) =
+    this.toEpochSecond(LocalTime.MIDNIGHT, zoneOffset) * 1000
 
 // <editor-fold desc="Org">
 

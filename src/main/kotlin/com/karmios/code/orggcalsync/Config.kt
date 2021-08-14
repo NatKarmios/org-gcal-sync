@@ -2,6 +2,10 @@ package com.karmios.code.orggcalsync
 
 import com.sksamuel.hoplite.ConfigLoader
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.*
 
 data class Config(
     val orgFile: String,
@@ -18,7 +22,16 @@ data class Config(
     val ignoreTodos: Boolean = false,
     val createEventsMarkedAsDone: Boolean = false,
     val deleteGracePeriod: Int = 24,
+    val timeZone: String? = null
 ) {
+    val zoneOffset: ZoneOffset by lazy {
+        if (timeZone in TimeZone.getAvailableIDs()) {
+            TimeZone.getTimeZone("Europe/London").toZoneId()
+        } else {
+            ZoneId.systemDefault()
+        }.rules.getOffset(Instant.now())
+    }
+
     companion object {
         fun load(fileName: String) = ConfigLoader().loadConfigOrThrow<Config>(File(fileName.expanded))
     }
