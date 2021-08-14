@@ -6,8 +6,9 @@
 ## Usage
 ```
 Usage: org-gcal-sync options_list
-Options:
-    --dry, -d [false] -> Skip sending event changes to Google
+Options: 
+    --dry, -d [false] -> Skip sending event changes to Google 
+    --autoRetry, -r [false] -> Automatically retry on certain errors 
     --config, -c [./config.yaml] -> Path to the desired config file { String }
     --verbose, -v -> Logging verbosity { Int }
     --help, -h -> Usage info

@@ -70,7 +70,7 @@ data class OrgEvent(
     companion object {
         private val logger = LogManager.getLogger(OrgEvent::class.java.simpleName)
 
-        private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>): OrgEvent? {
+        private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>, config: Config): OrgEvent? {
             val head = node.head
             if ("end" in head.tags) return null
             val start = head.scheduled?.startTime
@@ -83,14 +83,14 @@ data class OrgEvent(
                     ?: head.scheduled?.endTime
                         ?.asEventDate
                     ?: ends[head.title.trim()],
-                head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it) },
+                head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
                 head.state,
                 node.inheritedTags,
                 head.tags.toList()
             )
         }
 
-        private fun buildListFrom(nodes: List<OrgNodeInTree>): List<OrgEvent> {
+        private fun buildListFrom(nodes: List<OrgNodeInTree>, config: Config): List<OrgEvent> {
             val ends = nodes.mapNotNull { node ->
                 val head = node.head
                 if ("end" in head.tags) {
@@ -99,7 +99,7 @@ data class OrgEvent(
                         ?.let { head.title.trim() to it }
                 } else null
             }.toMap()
-            return nodes.mapNotNull { fromOrg(it, ends) }
+            return nodes.mapNotNull { fromOrg(it, ends, config) }
                 .also { logger.debug("Found org events: " + it.joinToString(", ") { e -> e.title }) }
         }
 
@@ -110,7 +110,7 @@ data class OrgEvent(
          * @param config Configuration
          */
         fun buildListFrom(tree: Org, config: Config) =
-            buildListFrom(if (config.flatten) tree.flattened else tree.children)
+            buildListFrom(if (config.flatten) tree.flattened else tree.children, config)
 
         /**
          * Gets the reminder delay of an event, in minutes, if it exists
@@ -119,16 +119,16 @@ data class OrgEvent(
          * @param delay The reminder delay, in org-mode format
          * @return The reminder delay in minutes
          */
-        private fun getDelayInMinutes(time: Calendar, delay: OrgDelay): Int? {
+        private fun getDelayInMinutes(time: Calendar, delay: OrgDelay, zoneOffset: ZoneOffset): Int? {
             return when (delay.unit) {
                 OrgInterval.Unit.HOUR -> delay.value * 60
                 OrgInterval.Unit.DAY -> delay.value * 60*24
                 OrgInterval.Unit.WEEK -> delay.value * 60*24*7
                 OrgInterval.Unit.MONTH -> run {
                     val epochSecond = time.timeInMillis / 1000
-                    val delayTime = LocalDateTime.ofEpochSecond(epochSecond, 0, ZoneOffset.UTC)
+                    val delayTime = LocalDateTime.ofEpochSecond(epochSecond, 0, zoneOffset)
                         .minusDays(delay.value.toLong())
-                    (epochSecond - delayTime.toEpochSecond(ZoneOffset.UTC)).toInt()
+                    (epochSecond - delayTime.toEpochSecond(zoneOffset)).toInt()
                 }
                 else -> null
             }

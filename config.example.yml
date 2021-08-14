@@ -49,3 +49,7 @@ createEventsMarkedAsDone: false
 # an event can be removed from the org file *without* being deleted from the calendar.
 # Useful if you remove/archive an event on the day but want it to remain in the calendar.
 deleteGracePeriod: 24
+
+# The time zone to be assumed for all dates
+# e.g. GMT, PST, Europe/London, etc.
+timeZone: # null; falls back on system default
