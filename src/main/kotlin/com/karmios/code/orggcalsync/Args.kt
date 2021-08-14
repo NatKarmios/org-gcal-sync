@@ -25,6 +25,11 @@ class Args private constructor() {
         shortName="d",
         description="Skip sending event changes to Google"
     ).default(false)
+    val autoRetry by parser.option(
+        ArgType.Boolean,
+        shortName="r",
+        description="Automatically retry on certain errors"
+    ).default(false)
     val configPath by parser.option(
         ArgType.String,
         fullName="config",
