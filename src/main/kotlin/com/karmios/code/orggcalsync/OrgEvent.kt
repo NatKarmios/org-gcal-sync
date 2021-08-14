@@ -4,7 +4,6 @@ import com.karmios.code.orggcalsync.Org.OrgNodeInTree
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Calendar
