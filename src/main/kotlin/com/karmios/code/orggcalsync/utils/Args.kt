@@ -1,4 +1,4 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.utils
 
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Level
 
 class Args private constructor() {
     companion object {
-        const val DEFAULT_CONFIG_FILE = "./config.yaml"
+        const val DEFAULT_CONFIG_FILE = "config.yaml"
         val DEFAULT_LOG_LEVEL: Level = Level.INFO
 
         fun from(args: Array<out String>) = Args().also { it.parser.parse(args.asList().toTypedArray()) }

@@ -1,9 +1,10 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.utils
 
 import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.model.Event as GcalEvent
 import com.google.api.services.calendar.model.EventDateTime
 import com.google.api.services.calendar.model.EventReminder
+import com.karmios.code.orggcalsync.org.OrgEvent
 import com.orgzly.org.datetime.OrgDateTime
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager

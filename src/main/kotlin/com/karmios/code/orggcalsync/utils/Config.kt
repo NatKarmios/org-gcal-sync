@@ -1,4 +1,4 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.utils
 
 import com.sksamuel.hoplite.ConfigLoader
 import java.time.Instant

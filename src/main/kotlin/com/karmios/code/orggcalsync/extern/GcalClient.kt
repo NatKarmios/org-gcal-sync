@@ -1,4 +1,4 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.extern
 
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.auth.oauth2.TokenResponse
@@ -22,6 +22,10 @@ import com.google.api.services.calendar.Calendar
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.Events
+import com.karmios.code.orggcalsync.EventsDiff
+import com.karmios.code.orggcalsync.utils.Config
+import com.karmios.code.orggcalsync.utils.expanded
+import com.karmios.code.orggcalsync.utils.toMillis
 import org.apache.logging.log4j.LogManager
 import java.io.*
 import java.time.LocalDate
@@ -67,13 +71,13 @@ class GcalClient (private val config: Config) {
      * @param changes The changes to send
      * @param dryRun Whether this is a dry run
      */
-    fun process(changes: Changes, dryRun: Boolean = false) {
+    fun process(changes: EventsDiff, dryRun: Boolean = false): String {
         val sizes = with(changes) { listOf(create, update, delete) }.map { it.size }
         if (sizes.all { it == 0 }) {
-            logger.info("No changes to process!")
-            return
+            return "No changes to process!".also(logger::info)
         }
-        logger.info("Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)")
+        val response = "Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)"
+        logger.info(response)
         val calls: List<(BatchRequest) -> String> =
             changes.create.map { event -> { req: BatchRequest ->
                 service.events()
@@ -105,6 +109,7 @@ class GcalClient (private val config: Config) {
                 else
                     req.execute()
             }
+        return response
     }
 
     // <editor-fold desc="Boilerplate">

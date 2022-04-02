@@ -1,6 +1,7 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.org
 
 import com.github.kittinunf.fuel.httpGet
+import com.karmios.code.orggcalsync.utils.Config
 import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
 import com.orgzly.org.parser.OrgNodeInList
@@ -59,8 +60,8 @@ sealed interface Org {
          * @param config Configuration
          * @return The newly-created tree
          */
-        fun load(config: Config): OrgRoot {
-            val input = loadInput(config)
+        fun load(config: Config, orgData: String?): OrgRoot {
+            val input = orgData ?: loadInput(config)
             val heads = loadHeads(input, config)
             return OrgRoot(heads, config)
         }

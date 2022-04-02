@@ -1,5 +1,7 @@
 package com.karmios.code.orggcalsync
 
+import com.karmios.code.orggcalsync.org.OrgEvent
+import com.karmios.code.orggcalsync.utils.*
 import org.apache.logging.log4j.LogManager
 import com.google.api.services.calendar.model.Event as GcalEvent
 
@@ -10,13 +12,13 @@ import com.google.api.services.calendar.model.Event as GcalEvent
  * @property update List of Google event IDs with relevant update data
  * @property delete List of Google event IDs to be deleted
  */
-class Changes private constructor(
+class EventsDiff private constructor(
     val create: List<GcalEvent>,
     val update: List<Pair<String, GcalEvent>>,
     val delete: List<Pair<String, String>>
 ) {
     companion object {
-        private val logger = LogManager.getLogger(Changes::class.java.simpleName)
+        private val logger = LogManager.getLogger(EventsDiff::class.java.simpleName)
 
         /**
          * Creates a Changes object from org-mode and Google Calendar events
@@ -26,7 +28,7 @@ class Changes private constructor(
          * @param config Configuration
          * @return Newly-created Changes object
          */
-        fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>, config: Config): Changes {
+        fun from(orgEvents: List<OrgEvent>, gcalEvents: List<GcalEvent>, config: Config): EventsDiff {
             val create = mutableListOf<GcalEvent>()
             val update = mutableListOf<Pair<String, GcalEvent>>()
 
@@ -59,7 +61,7 @@ class Changes private constructor(
                         .map { it.id to it.summary }
                 }
 
-            return Changes(create, update, delete)
+            return EventsDiff(create, update, delete)
         }
     }
 }

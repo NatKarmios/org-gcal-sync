@@ -1,6 +1,9 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.org
 
-import com.karmios.code.orggcalsync.Org.OrgNodeInTree
+import com.karmios.code.orggcalsync.org.Org.OrgNodeInTree
+import com.karmios.code.orggcalsync.utils.Config
+import com.karmios.code.orggcalsync.utils.EventDate
+import com.karmios.code.orggcalsync.utils.asEventDate
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
