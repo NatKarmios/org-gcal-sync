@@ -13,6 +13,7 @@ data class Config(
     val localOrgFile: Boolean = false,
     val calendarId: String = System.getenv("CALENDAR_ID")
         ?: throw IllegalArgumentException("No calendar ID supplied!"),
+    val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN")?.ifEmpty { null },
 
     val orgEventsPath: String = "",
     val credentialFile: String = "./credentials.json",

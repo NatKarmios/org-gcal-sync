@@ -1,6 +1,7 @@
 package com.karmios.code.orggcalsync
 
 import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.auth.oauth2.TokenResponse
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
@@ -16,6 +17,7 @@ import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.client.util.store.FileDataStoreFactory
+import com.google.api.client.util.store.MemoryDataStoreFactory
 import com.google.api.services.calendar.Calendar
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
@@ -132,17 +134,30 @@ class GcalClient (private val config: Config) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val file = File(config.credentialFile.expanded)
-        if (!file.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, file.reader())
+        val secretsFile = File(config.credentialFile.expanded)
+        if (!secretsFile.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, secretsFile.reader())
 
         // Build flow and trigger user authorization request.
-        val flow = GoogleAuthorizationCodeFlow.Builder(
+        val flowBuilder = GoogleAuthorizationCodeFlow.Builder(
             HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES
-        )
-            .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
-            .setAccessType("offline")
-            .build()
+        ).setAccessType("offline")
+
+        val flow = if (config.googleRefreshToken == null) {
+            flowBuilder.setDataStoreFactory(
+                FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH))
+            ).build()
+        } else {
+            val tokens = TokenResponse()
+                .setRefreshToken(config.googleRefreshToken)
+                .setAccessToken("")
+                .setExpiresInSeconds(0)
+
+            flowBuilder.setDataStoreFactory(MemoryDataStoreFactory())
+                .build()
+                .apply { createAndStoreCredential(tokens, "user") }
+        }
+
         val receiver = LocalServerReceiver.Builder().setPort(8888).build()
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }

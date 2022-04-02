@@ -8,6 +8,11 @@ orgFile: "~/path/to/file.org"
 # Can be supplied by the CALENDAR_ID environment variable instead
 calendarId: "your-calendar-id@group.calendar.google.com"
 
+# The OAuth refresh token for your Google account, scoped for read/write calendar access
+# Can be supplied by the GOOGLE_REFRESH_TOKEN environment variable instead
+# If not present, then the `tokens` directory in the current working directory will be used as fallback
+googleRefreshToken: "token_here"
+
 
 # === Optional fields; default values are shown here ===
 
