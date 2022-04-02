@@ -6,8 +6,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
+import kotlin.system.exitProcess
 
 fun main(vararg rawArgs: String) {
+    var failed = false
+
     val out = RedirectedPrintStream(System.out)
     val err = RedirectedPrintStream(System.err)
     System.setOut(out)
@@ -41,6 +44,7 @@ fun main(vararg rawArgs: String) {
             logger.debug("Encountered errors:\n${errs.indent()}")
         }
     } catch (e: TokenResponseException) {
+        failed = true
         if (args.autoRetry && File("./tokens").deleteRecursively()) {
             logger.info("Google auth tokens are invalid/expired - deleting and restarting.")
             main(*rawArgs)
@@ -48,9 +52,13 @@ fun main(vararg rawArgs: String) {
             logger.fatal("Google auth tokens are invalid/expired - can't continue!")
         }
     } catch (e: Exception) {
+        failed = true
         logger.fatal(e.message ?: "Failed with ${e.javaClass.name}!")
         if (!logger.isDebugEnabled)
             logger.fatal("Run with higher verbosity for more info.")
         logger.debug(e.stackTraceToString())
     }
+
+    if (failed)
+        exitProcess(1)
 }
