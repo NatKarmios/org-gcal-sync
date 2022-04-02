@@ -8,8 +8,11 @@ import java.time.ZoneOffset
 import java.util.*
 
 data class Config(
-    val orgFile: String,
-    val calendarId: String,
+    val orgFile: String = System.getenv("ORG_FILE")
+        ?: throw IllegalArgumentException("No org file supplied!"),
+    val calendarId: String = System.getenv("CALENDAR_ID")
+        ?: throw IllegalArgumentException("No calendar ID supplied!"),
+
     val orgEventsPath: String = "",
     val credentialFile: String = "./credentials.json",
     val todoKeywords: List<String> = listOf("TODO", "WAIT", "STRT", "PROJ"),

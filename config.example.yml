@@ -1,9 +1,11 @@
 # === Required fields ===
 
 # The path to your org file
+# Can be supplied by the ORG_FILE environment variable instead
 orgFile: "~/path/to/file.org"
 
 # The ID for the Google calendar to be affected
+# Can be supplied by the CALENDAR_ID environment variable instead
 calendarId: "your-calendar-id@group.calendar.google.com"
 
 
