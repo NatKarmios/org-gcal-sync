@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.karmios.code"
-version = "1.0.2"
+version = "1.0.3"
 
 tasks.named<ShadowJar>("shadowJar") {
     outputs.upToDateWhen { false }
