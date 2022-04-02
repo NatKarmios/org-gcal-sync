@@ -1,7 +1,6 @@
 package com.karmios.code.orggcalsync
 
 import com.sksamuel.hoplite.ConfigLoader
-import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -13,7 +12,8 @@ data class Config(
     val localOrgFile: Boolean = false,
     val calendarId: String = System.getenv("CALENDAR_ID")
         ?: throw IllegalArgumentException("No calendar ID supplied!"),
-    val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN")?.ifEmpty { null },
+    val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN").nullIfBlank,
+    val googleSecrets: String? = System.getenv("GOOGLE_SECRETS").nullIfBlank,
 
     val orgEventsPath: String = "",
     val credentialFile: String = "./credentials.json",

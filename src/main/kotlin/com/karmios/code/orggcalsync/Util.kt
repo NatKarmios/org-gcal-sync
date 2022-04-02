@@ -43,6 +43,9 @@ val String.expanded
         System.getProperty("user.home") + this.substring(1)
     } else this
 
+val String?.nullIfBlank
+    get() = if (this.isNullOrBlank()) null else this
+
 /**
  * The given date, converted to milliseconds since epoch
  */
@@ -121,11 +124,11 @@ infix fun GcalEvent?.eq(that: GcalEvent?): Boolean {
     if (this == null && that == null) return true
     if (this == null || that == null) return false
 
-    return this.summary ?: "" == that.summary ?: ""
-            && this.description ?: "" == that.description ?: ""
+    return ((this.summary ?: "") == (that.summary ?: "")
+            && (this.description ?: "") == (that.description ?: "")
             && this.start.display == that.start.display
             && this.end.display == that.end.display
-            && this.reminders eq that.reminders
+            && this.reminders eq that.reminders)
 }
 
 /**

@@ -13,6 +13,10 @@ calendarId: "your-calendar-id@group.calendar.google.com"
 # If not present, then the `tokens` directory in the current working directory will be used as fallback
 googleRefreshToken: "token_here"
 
+# The contents of your credentials.json; if absent, the file at `credentialFile` will be used
+# Can be supplied by the GOOGLE_SECRETS environment variable instead
+googleSecrets: "{ \"secret\": \"some_secrets_here\" }"
+
 
 # === Optional fields; default values are shown here ===
 

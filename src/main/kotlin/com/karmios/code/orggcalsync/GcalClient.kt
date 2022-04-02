@@ -134,9 +134,12 @@ class GcalClient (private val config: Config) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val secretsFile = File(config.credentialFile.expanded)
-        if (!secretsFile.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, secretsFile.reader())
+        val secretsReader = config.googleSecrets?.reader() ?: let {
+            val secretsFile = File(config.credentialFile.expanded)
+            if (!secretsFile.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
+            secretsFile.reader()
+        }
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, secretsReader)
 
         // Build flow and trigger user authorization request.
         val flowBuilder = GoogleAuthorizationCodeFlow.Builder(
