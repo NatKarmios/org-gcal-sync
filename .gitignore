@@ -4,3 +4,4 @@ tokens/
 build/
 run/
 credentials.json
+config.yaml

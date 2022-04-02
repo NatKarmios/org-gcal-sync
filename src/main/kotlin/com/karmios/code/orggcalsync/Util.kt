@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.logging.log4j.core.config.Configurator
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.*
@@ -47,6 +48,15 @@ val String.expanded
  */
 fun LocalDate.toMillis(zoneOffset: ZoneOffset) =
     this.toEpochSecond(LocalTime.MIDNIGHT, zoneOffset) * 1000
+
+/**
+ * Gets a file from the jar resources, with a fallback local file
+ */
+fun getResourceFile(path: String, fallbackPath: String) =
+    object {}.javaClass.getResource(path)
+        ?.let { File(it.toURI()) }
+        ?.let { if (it.exists()) it else null }
+        ?: File(fallbackPath)
 
 // <editor-fold desc="Org">
 

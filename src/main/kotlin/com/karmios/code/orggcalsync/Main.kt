@@ -27,7 +27,7 @@ fun main(vararg rawArgs: String) {
         PrintStream(buf, true, UTF_8).use {
             err.redirectTo(it)
 
-            val config = logger.traceAction("loading config") { Config.load(args.configPath) }
+            val config = logger.traceAction("loading config") { Config.load(args) }
             val org = logger.traceAction("loading org data") { Org.load(config) }
             val orgEvents = logger.traceAction("building events from org data") { org.findEvents() }
             val gcal = logger.traceAction("creating gcal client") { GcalClient(config) }
