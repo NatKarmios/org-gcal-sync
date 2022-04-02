@@ -47,6 +47,7 @@ dependencies {
         implementation("org.apache.logging.log4j:log4j-api:$log4j")
         implementation("org.apache.logging.log4j:log4j-core:$log4j")
         implementation("org.apache.logging.log4j:log4j-slf4j-impl:$log4j")
+        implementation("com.github.kittinunf.fuel:fuel:$fuel")
     }
 }
 
@@ -56,6 +57,7 @@ object Versions {
     const val kotlinx_cli = "0.3.2"
     const val log4j       = "2.14.1"
     const val orgzly      = "1.2.2"
+    const val fuel        = "2.3.1"
 }
 
 val compileKotlin: KotlinCompile by tasks

@@ -1,5 +1,6 @@
 package com.karmios.code.orggcalsync
 
+import com.github.kittinunf.fuel.httpGet
 import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
 import com.orgzly.org.parser.OrgNodeInList
@@ -30,15 +31,27 @@ sealed interface Org {
     companion object {
         private val logger = LogManager.getLogger(Org::class.java.simpleName)
 
-        private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
+        private fun loadHeads(input: String, config: Config): List<OrgNodeInList> =
             OrgParser.Builder()
-                .setInput(File(fileName).bufferedReader())
+                .setInput(input)
                 .setTodoKeywords(config.todoKeywords.toSet())
                 .setDoneKeywords(config.doneKeywords.toSet())
                 .build()
-                .also { logger.debug("Reading and parsing org from '$fileName'") }
+                .also { logger.trace("Parsing org data...") }
                 .parse()
                 .headsInList
+
+        private fun loadInput(config: Config) =
+            if (config.localOrgFile) {
+                logger.trace("Reading org data from file...")
+                File(config.orgFile).readText()
+            } else {
+                logger.trace("Fetching org data from URL...")
+                val (_, _, result) = config.orgFile
+                    .httpGet()
+                    .responseString()
+                result.get()
+            }
 
         /**
          * Creates a tree from an org-mode file
@@ -46,7 +59,11 @@ sealed interface Org {
          * @param config Configuration
          * @return The newly-created tree
          */
-        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile.expanded, config), config)
+        fun load(config: Config): OrgRoot {
+            val input = loadInput(config)
+            val heads = loadHeads(input, config)
+            return OrgRoot(heads, config)
+        }
     }
 
     /**
@@ -78,7 +95,7 @@ sealed interface Org {
         }
 
         private fun findEventsAt(path: String) : List<OrgEvent>? {
-            logger.debug("Finding event headlines at '$path'")
+            logger.trace("Finding event headlines at '$path'...")
             val node = findNodeAt(path) ?: return null
             return OrgEvent.buildListFrom(node, config)
         }
@@ -103,7 +120,7 @@ sealed interface Org {
 
         init {
             val children = mutableListOf<OrgNodeInTree>()
-            while (nodes.peek()?.level ?: 0 > node.level)
+            while ((nodes.peek()?.level ?: 0) > node.level)
                 children.add(OrgNodeInTree(nodes.remove(), nodes, this))
             this.children = children
         }

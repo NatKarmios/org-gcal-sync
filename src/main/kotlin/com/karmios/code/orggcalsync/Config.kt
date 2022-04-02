@@ -10,6 +10,7 @@ import java.util.*
 data class Config(
     val orgFile: String = System.getenv("ORG_FILE")
         ?: throw IllegalArgumentException("No org file supplied!"),
+    val localOrgFile: Boolean = false,
     val calendarId: String = System.getenv("CALENDAR_ID")
         ?: throw IllegalArgumentException("No calendar ID supplied!"),
 
