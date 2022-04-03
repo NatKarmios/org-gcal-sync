@@ -20,9 +20,9 @@ import java.util.*
 import kotlin.text.replaceFirstChar
 
 
-typealias EventDate = Pair<Calendar, Boolean>
-
 const val HOUR = 60*60*1000
+
+// <editor-fold desc="Primitives">
 
 /**
  * Clamp an integer such that it lies between certain bounds
@@ -47,6 +47,12 @@ val String.expanded
 val String?.nullIfBlank
     get() = if (this.isNullOrBlank()) null else this
 
+// </editor-fold>
+
+// <editor-fold desc="Time/Date">
+
+typealias EventDate = Pair<Calendar, Boolean>
+
 fun Calendar.withZone(zoneId: ZoneId): Calendar {
     this.timeZone = TimeZone.getTimeZone(zoneId)
     return this
@@ -57,6 +63,8 @@ fun Calendar.withZone(zoneId: ZoneId): Calendar {
  */
 fun LocalDate.toMillis(zoneOffset: ZoneOffset) =
     this.toEpochSecond(LocalTime.MIDNIGHT, zoneOffset) * 1000
+
+// </editor-fold>
 
 /**
  * Gets a file from the jar resources, with a fallback local file
@@ -158,11 +166,6 @@ val EventDateTime.display: String
 
 infix fun EventDateTime.eq(that: EventDateTime): Boolean {
     return this.display == that.display
-//    return if (this.date != null && that.date != null) {
-//        this.date.toString() == that.date.toString()
-//    } else if (this.dateTime != null && that.dateTime != null) {
-//        this.dateTime.value == that.dateTime.value
-//    } else false
 }
 
 /**
@@ -190,7 +193,7 @@ infix fun GcalEvent.Reminders?.eq(that: GcalEvent.Reminders?): Boolean {
  *
  * @constructor
  *
- * @param ps The "default" output; usually System.out or System.err
+ * @param ps The "default" output; usually `System.out` or `System.err`
  */
 class RedirectedPrintStream(ps: PrintStream) : PrintStream(ps) {
     /**

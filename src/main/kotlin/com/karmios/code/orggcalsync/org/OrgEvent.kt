@@ -29,8 +29,8 @@ data class OrgEvent(
     val end: EventDate?,
     val reminderOffset: Int?,
     val state: String?,
-    val tags: List<String>,
-    val ownTags: List<String>
+    val tags: Set<String>,
+    val ownTags: Set<String>
 ) {
     /**
      * @param config Configuration
@@ -88,8 +88,8 @@ data class OrgEvent(
                     ?: ends[head.title.trim()],
                 head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
                 head.state,
-                node.inheritedTags,
-                head.tags.toList()
+                node.inheritedTags.toSet(),
+                head.tags.toSet()
             )
         }
 

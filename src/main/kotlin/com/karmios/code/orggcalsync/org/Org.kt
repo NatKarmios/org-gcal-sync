@@ -11,7 +11,7 @@ import java.io.File
 import java.util.*
 
 /**
- * A node in an tree representing an org-mode document
+ * A node in a tree representing an org-mode document
  */
 sealed interface Org {
     /**
