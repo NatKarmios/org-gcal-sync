@@ -1,16 +1,18 @@
 package com.karmios.code.orggcalsync.utils
 
 import com.sksamuel.hoplite.ConfigLoader
+import com.sksamuel.hoplite.yaml.YamlPropertySource
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.*
 
 data class Config(
-    val orgFile: String = System.getenv("ORG_FILE")
-        ?: throw IllegalArgumentException("No org file supplied!"),
+    val orgFile: String? = System.getenv("ORG_FILE").nullIfBlank,
     val localOrgFile: Boolean = false,
-    val calendarId: String = System.getenv("CALENDAR_ID")
+    val calendarId: String = System.getenv("CALENDAR_ID").nullIfBlank
         ?: throw IllegalArgumentException("No calendar ID supplied!"),
     val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN").nullIfBlank,
     val googleSecrets: String? = System.getenv("GOOGLE_SECRETS").nullIfBlank,
@@ -29,16 +31,29 @@ data class Config(
     val deleteGracePeriod: Int = 24,
     val timeZone: String? = null
 ) {
-    val zoneOffset: ZoneOffset by lazy {
+    val timeZoneId: ZoneId by lazy {
         if (timeZone in TimeZone.getAvailableIDs()) {
-            TimeZone.getTimeZone("Europe/London").toZoneId()
+            TimeZone.getTimeZone(timeZone).toZoneId().also {
+                logger.debug("Found time zone '${it.id}'")
+            }
         } else {
-            ZoneId.systemDefault()
-        }.rules.getOffset(Instant.now())
+            ZoneId.systemDefault().also {
+                logger.debug("Using system default time zone '${it.id}'")
+            }
+        }
+    }
+
+    val zoneOffset: ZoneOffset by lazy {
+        timeZoneId.rules.getOffset(Instant.now())
     }
 
     companion object {
+        val logger: Logger = LogManager.getLogger(Config::class.java.simpleName)
+
         fun load(args: Args): Config =
-            ConfigLoader().loadConfigOrThrow(getResourceFile("/config.yaml", args.configPath.expanded))
+            ConfigLoader.Builder()
+                .addPropertySource(YamlPropertySource(readResource("/config.yaml", args.configPath.expanded)))
+                .build()
+                .loadConfigOrThrow()
     }
 }

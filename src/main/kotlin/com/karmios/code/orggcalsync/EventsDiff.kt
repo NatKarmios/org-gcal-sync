@@ -34,8 +34,10 @@ class EventsDiff private constructor(
 
             val unusedGcalEvents = gcalEvents.toMutableList()
             val sortedGcalEvents = gcalEvents.sortedByDescending { (it.start.date ?: it.start.dateTime!!).value }
+            val sortedOrgEvents = orgEvents.sortedByDescending { it.start.first }
+                .map { it to it.toGcal(config.zoneOffset) }
 
-            for ((orgEventRaw, orgEvent) in orgEvents.sortedByDescending { it.start.first }.map { it to it.asGcal }) {
+            for ((orgEventRaw, orgEvent) in sortedOrgEvents) {
                 sortedGcalEvents.find {
                     it.summary == orgEvent.summary && it in unusedGcalEvents
                 }?.also { gcalEvent ->
@@ -63,5 +65,7 @@ class EventsDiff private constructor(
 
             return EventsDiff(create, update, delete)
         }
+
+        private infix fun GcalEvent?.eq(that: GcalEvent?) = isEq(this, that, logger)
     }
 }

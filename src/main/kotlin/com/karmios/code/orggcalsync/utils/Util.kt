@@ -47,6 +47,11 @@ val String.expanded
 val String?.nullIfBlank
     get() = if (this.isNullOrBlank()) null else this
 
+fun Calendar.withZone(zoneId: ZoneId): Calendar {
+    this.timeZone = TimeZone.getTimeZone(zoneId)
+    return this
+}
+
 /**
  * The given date, converted to milliseconds since epoch
  */
@@ -56,30 +61,29 @@ fun LocalDate.toMillis(zoneOffset: ZoneOffset) =
 /**
  * Gets a file from the jar resources, with a fallback local file
  */
-fun getResourceFile(path: String, fallbackPath: String) =
-    object {}.javaClass.getResource(path)
-        ?.let { File(it.toURI()) }
-        ?.let { if (it.exists()) it else null }
-        ?: File(fallbackPath)
+fun readResource(path: String, fallbackPath: String) =
+    object {}.javaClass.getResourceAsStream(path)
+        ?.reader()?.readText()
+        ?: File(fallbackPath).readText()
 
 // <editor-fold desc="Org">
 
 /**
  * Converted to EventDate
  */
-val OrgDateTime.asEventDate
-    get() = this.calendar to this.hasTime()
+fun OrgDateTime.toEventDate(zoneId: ZoneId) =
+    this.calendar.withZone(zoneId) to this.hasTime()
 
 /**
  * Converted to GcalEvent
  */
-val OrgEvent.asGcal
-    get() = GcalEvent().also { event ->
+fun OrgEvent.toGcal(offset: ZoneOffset) =
+    GcalEvent().also { event ->
         event.summary = this.title.trim()
         event.description = this.content.trim()
-        event.start = this.start.toGcalDate(0, 12)
-        event.end = this.end?.toGcalDate(0, 36)
-            ?: this.start.toGcalDate(1, 36)
+        event.start = this.start.toGcalDate(0, 12, offset)
+        event.end = this.end?.toGcalDate(0, 36, offset)
+            ?: this.start.toGcalDate(1, 36, offset)
         event.reminders = GcalEvent.Reminders().also {
             it.useDefault = false
             val reminder = this.reminderOffset?.let { offset ->
@@ -102,14 +106,20 @@ val OrgEvent.asGcal
  * @param shiftIfDateTime Time offset (in hours) if the date includes time
  * @param shiftIfDate Time offset (in hours) if the date *does not* include time
  */
-fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int) =
-    EventDateTime().also {
-        val (date, hasTime) = this
-        if (hasTime)
-            it.dateTime = DateTime(date.timeInMillis + shiftIfDateTime * HOUR)
-        else
-            it.date = DateTime(true, date.timeInMillis + shiftIfDate * HOUR, null)
-    }
+fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int, offset: ZoneOffset): EventDateTime {
+    val (date, hasTime) = this
+
+    val gcalDate = EventDateTime()
+    val millis = date.timeInMillis
+    val offSecs = offset.totalSeconds / 60
+
+    if (hasTime)
+        gcalDate.dateTime = DateTime(millis + shiftIfDateTime * HOUR, offSecs)
+    else
+        gcalDate.date = DateTime(true, millis + shiftIfDate * HOUR, offSecs)
+
+    return gcalDate
+}
 
 /**
  * The end time of the event, in epoch milliseconds
@@ -121,22 +131,39 @@ val GcalEvent.endMillis
 /**
  * Deep equality based on org-relevant fields
  */
-infix fun GcalEvent?.eq(that: GcalEvent?): Boolean {
-    if (this == null && that == null) return true
-    if (this == null || that == null) return false
+fun isEq(a: GcalEvent?, b: GcalEvent?, logger: Logger): Boolean {
+    if (a == null && b == null) return true
+    if (a == null || b == null) return false
 
-    return ((this.summary ?: "") == (that.summary ?: "")
-            && (this.description ?: "") == (that.description ?: "")
-            && this.start.display == that.start.display
-            && this.end.display == that.end.display
-            && this.reminders eq that.reminders)
+    val conflictingProperties = listOf(
+        ((a.summary ?: "") == (b.summary ?: "")) to "summary",
+        ((a.description ?: "") == (b.description ?: "")) to "description",
+        (a.start eq b.start) to "start time",
+        (a.end eq b.end) to "end time",
+        (a.reminders eq b.reminders) to "reminder list"
+    ).mapNotNull { (isEq, property) -> if (isEq) null else property }
+
+    return conflictingProperties.isEmpty().also { if (!it) {
+        val name = a.summary ?: b.summary
+        val conflicts = conflictingProperties.joinToString(", ")
+        logger.debug("Event '$name' conflicts due to mismatched $conflicts")
+    } }
 }
 
 /**
  * Clean string representation of an EventDateTime - used for easy equality check
  */
 val EventDateTime.display: String
-    get() = (this.date ?: this.dateTime!!).toString()
+    get() = this.date?.toString() ?: this.dateTime!!.toStringRfc3339()
+
+infix fun EventDateTime.eq(that: EventDateTime): Boolean {
+    return this.display == that.display
+//    return if (this.date != null && that.date != null) {
+//        this.date.toString() == that.date.toString()
+//    } else if (this.dateTime != null && that.dateTime != null) {
+//        this.dateTime.value == that.dateTime.value
+//    } else false
+}
 
 /**
  * Deep equality based on org-relevant fields
@@ -217,7 +244,7 @@ fun setLogLevel(level: Level, out: RedirectedPrintStream): String {
  * @return Value returned from `f`
  */
 fun <R> Logger.traceAction(msg: String, f: () -> R): R {
-    this.trace("${msg.capitalized}...")
+    this.info("${msg.capitalized}...")
     val result = f()
     this.trace( "Done $msg.")
     return result

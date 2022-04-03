@@ -30,7 +30,7 @@ object OrgGcalSync {
         System.setOut(out)
         System.setErr(err)
 
-        val logLevelMsg = setLogLevel(args.logLevel, out)
+        val logLevelMsg = args.logLevel?.let { setLogLevel(it, out) } ?: ""
         val logger = LogManager.getLogger(OrgGcalSync::class.java.simpleName)
         if (logLevelMsg.isNotEmpty())
             logger.debug(logLevelMsg)

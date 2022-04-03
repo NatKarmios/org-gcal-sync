@@ -1,9 +1,7 @@
 package com.karmios.code.orggcalsync.org
 
 import com.karmios.code.orggcalsync.org.Org.OrgNodeInTree
-import com.karmios.code.orggcalsync.utils.Config
-import com.karmios.code.orggcalsync.utils.EventDate
-import com.karmios.code.orggcalsync.utils.asEventDate
+import com.karmios.code.orggcalsync.utils.*
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
@@ -81,10 +79,12 @@ data class OrgEvent(
             return OrgEvent(
                 head.title.trim(),
                 head.content.trim(),
-                start.calendar to start.hasTime(),
-                start.endCalendar?.let { it to true }
+                start.calendar.withZone(config.timeZoneId) to start.hasTime(),
+                start.endCalendar
+                    ?.withZone(config.timeZoneId)
+                    ?.let { it to true }
                     ?: head.scheduled?.endTime
-                        ?.asEventDate
+                        ?.toEventDate(config.timeZoneId)
                     ?: ends[head.title.trim()],
                 head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
                 head.state,
@@ -98,7 +98,7 @@ data class OrgEvent(
                 val head = node.head
                 if ("end" in head.tags) {
                     head.scheduled?.startTime
-                        ?.asEventDate
+                        ?.toEventDate(config.timeZoneId)
                         ?.let { head.title.trim() to it }
                 } else null
             }.toMap()

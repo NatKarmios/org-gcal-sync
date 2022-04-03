@@ -24,10 +24,12 @@ tasks.named<ShadowJar>("shadowJar") {
     exclude("**/*.kotlin_metadata")
     exclude("**/*.kotlin_module")
     exclude("META-INF/maven/**")
+
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer::class.java)
 }
 
 application {
-    mainClass.set("com.karmios.code.orggcalsync.MainKt")
+    mainClass.set("com.karmios.code.orggcalsync.OrgGcalSync")
 }
 
 repositories {

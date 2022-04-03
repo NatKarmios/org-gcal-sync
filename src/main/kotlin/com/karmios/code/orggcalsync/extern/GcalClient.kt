@@ -55,6 +55,7 @@ class GcalClient (private val config: Config) {
         val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
         val rangeEnd = now.plusMonths(endMonthOffset)
         val events: Events = service.events().list(config.calendarId)
+            .setTimeZone(config.timeZoneId.id)
             .setMaxResults(1000)
             .setTimeMin(DateTime(rangeStart.toMillis(config.zoneOffset)))
             .setTimeMax(DateTime(rangeEnd.toMillis(config.zoneOffset)))

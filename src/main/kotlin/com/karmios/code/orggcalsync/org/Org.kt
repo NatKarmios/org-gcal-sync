@@ -42,13 +42,13 @@ sealed interface Org {
                 .parse()
                 .headsInList
 
-        private fun loadInput(config: Config) =
-            if (config.localOrgFile) {
+        private fun loadInput(orgFile: String, isLocal: Boolean) =
+            if (isLocal) {
                 logger.trace("Reading org data from file...")
-                File(config.orgFile).readText()
+                File(orgFile).readText()
             } else {
                 logger.trace("Fetching org data from URL...")
-                val (_, _, result) = config.orgFile
+                val (_, _, result) = orgFile
                     .httpGet()
                     .responseString()
                 result.get()
@@ -61,7 +61,9 @@ sealed interface Org {
          * @return The newly-created tree
          */
         fun load(config: Config, orgData: String?): OrgRoot {
-            val input = orgData ?: loadInput(config)
+            if (orgData.isNullOrBlank() && config.orgFile.isNullOrBlank())
+                throw IllegalArgumentException("No org file provided!")
+            val input = orgData ?: loadInput(config.orgFile!!, config.localOrgFile)
             val heads = loadHeads(input, config)
             return OrgRoot(heads, config)
         }
