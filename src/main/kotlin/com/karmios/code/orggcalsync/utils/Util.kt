@@ -244,7 +244,7 @@ fun setLogLevel(level: Level, out: RedirectedPrintStream): String {
  * @return Value returned from `f`
  */
 fun <R> Logger.traceAction(msg: String, f: () -> R): R {
-    this.info("${msg.capitalized}...")
+    this.trace("${msg.capitalized}...")
     val result = f()
     this.trace( "Done $msg.")
     return result
