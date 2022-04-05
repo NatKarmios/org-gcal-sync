@@ -27,7 +27,7 @@ class LambdaHandler : RequestHandler<Request, Response> {
         val (success, response) = OrgGcalSync(args, orgData)
         val responseBody = Klaxon().toJsonString(mapOf(
             "success" to success,
-            "msg" to response
+            "msg" to (if (args.dry) "(Dry run) " else "") + response
         ))
 
         return Response()
