@@ -102,6 +102,7 @@ fun OrgEvent.toGcal(offset: ZoneOffset) =
             }
             it.overrides = listOfNotNull(reminder)
         }
+        event.location = this.location
     }
 
 // </editor-fold>
@@ -148,7 +149,8 @@ fun isEq(a: GcalEvent?, b: GcalEvent?, logger: Logger): Boolean {
         ((a.description ?: "") == (b.description ?: "")) to "description",
         (a.start eq b.start) to "start time",
         (a.end eq b.end) to "end time",
-        (a.reminders eq b.reminders) to "reminder list"
+        (a.reminders eq b.reminders) to "reminder list",
+        (a.location == b.location) to "location"
     ).mapNotNull { (isEq, property) -> if (isEq) null else property }
 
     return conflictingProperties.isEmpty().also { if (!it) {

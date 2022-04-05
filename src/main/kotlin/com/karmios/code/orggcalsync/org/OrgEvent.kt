@@ -20,6 +20,7 @@ import java.util.Calendar
  * @property state Event's state, as configured with todoKeywords / doneKeywords
  * @property tags List of event's tags, including inherited
  * @property ownTags List of event's tags, not including inherited
+ * @property location The location of the event
  * @constructor
  */
 data class OrgEvent(
@@ -30,7 +31,8 @@ data class OrgEvent(
     val reminderOffset: Int?,
     val state: String?,
     val tags: Set<String>,
-    val ownTags: Set<String>
+    val ownTags: Set<String>,
+    val location: String?
 ) {
     /**
      * @param config Configuration
@@ -89,7 +91,8 @@ data class OrgEvent(
                 head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
                 head.state,
                 node.inheritedTags.toSet(),
-                head.tags.toSet()
+                head.tags.toSet(),
+                head.properties["LOCATION"]
             )
         }
 
