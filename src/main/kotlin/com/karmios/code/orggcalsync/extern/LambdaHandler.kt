@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.beust.klaxon.Klaxon
 import com.beust.klaxon.KlaxonException
 import com.karmios.code.orggcalsync.OrgGcalSync
-import com.karmios.code.orggcalsync.utils.Args
+import com.karmios.code.orggcalsync.utils.JsonArgs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
@@ -15,13 +15,13 @@ import org.apache.logging.log4j.Logger
 @Suppress("unused")
 class LambdaHandler : RequestHandler<Request, Response> {
     override fun handleRequest(event: Request, context: Context?): Response {
-        val args = Args.from(emptyArray())
         val input = try {
             Klaxon().parseJsonObject((event.body ?: "").reader())
         } catch (_: KlaxonException) {
             logger.error("Failed to parse json:\n${event.body}")
             null
         }
+        val args = JsonArgs(input)
 
         val orgData = input?.string("orgData")
         val (success, response) = OrgGcalSync(args, orgData)

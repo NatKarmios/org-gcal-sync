@@ -15,7 +15,7 @@ import kotlin.system.exitProcess
 object OrgGcalSync {
     @JvmStatic
     fun main(vararg rawArgs: String) {
-        val args = Args.from(rawArgs)
+        val args = CommandLineArgs.from(rawArgs)
         val (success, _) = OrgGcalSync(args)
         if (!success)
             exitProcess(1)
