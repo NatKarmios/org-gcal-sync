@@ -1,6 +1,7 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.extern
 
 import com.google.api.client.auth.oauth2.Credential
+import com.google.api.client.auth.oauth2.TokenResponse
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
@@ -16,10 +17,15 @@ import com.google.api.client.json.JsonFactory
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.client.util.store.FileDataStoreFactory
+import com.google.api.client.util.store.MemoryDataStoreFactory
 import com.google.api.services.calendar.Calendar
 import com.google.api.services.calendar.CalendarScopes
 import com.google.api.services.calendar.model.Event
 import com.google.api.services.calendar.model.Events
+import com.karmios.code.orggcalsync.EventsDiff
+import com.karmios.code.orggcalsync.utils.Config
+import com.karmios.code.orggcalsync.utils.expanded
+import com.karmios.code.orggcalsync.utils.toMillis
 import org.apache.logging.log4j.LogManager
 import java.io.*
 import java.time.LocalDate
@@ -49,6 +55,7 @@ class GcalClient (private val config: Config) {
         val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
         val rangeEnd = now.plusMonths(endMonthOffset)
         val events: Events = service.events().list(config.calendarId)
+            .setTimeZone(config.timeZoneId.id)
             .setMaxResults(1000)
             .setTimeMin(DateTime(rangeStart.toMillis(config.zoneOffset)))
             .setTimeMax(DateTime(rangeEnd.toMillis(config.zoneOffset)))
@@ -65,13 +72,13 @@ class GcalClient (private val config: Config) {
      * @param changes The changes to send
      * @param dryRun Whether this is a dry run
      */
-    fun process(changes: Changes, dryRun: Boolean = false) {
+    fun process(changes: EventsDiff, dryRun: Boolean = false): String {
         val sizes = with(changes) { listOf(create, update, delete) }.map { it.size }
         if (sizes.all { it == 0 }) {
-            logger.info("No changes to process!")
-            return
+            return "No changes to process!".also(logger::info)
         }
-        logger.info("Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)")
+        val response = "Processing ${sizes[0]} creation(s), ${sizes[1]} update(s), and ${sizes[2]} deletion(s)"
+        logger.info(response)
         val calls: List<(BatchRequest) -> String> =
             changes.create.map { event -> { req: BatchRequest ->
                 service.events()
@@ -103,6 +110,7 @@ class GcalClient (private val config: Config) {
                 else
                     req.execute()
             }
+        return response
     }
 
     // <editor-fold desc="Boilerplate">
@@ -132,17 +140,33 @@ class GcalClient (private val config: Config) {
 
     private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
         // Load client secrets.
-        val file = File(config.credentialFile.expanded)
-        if (!file.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, file.reader())
+        val secretsReader = config.googleSecrets?.reader() ?: let {
+            val secretsFile = File(config.credentialFile.expanded)
+            if (!secretsFile.exists()) throw FileNotFoundException("File not found: ${config.credentialFile}")
+            secretsFile.reader()
+        }
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, secretsReader)
 
         // Build flow and trigger user authorization request.
-        val flow = GoogleAuthorizationCodeFlow.Builder(
+        val flowBuilder = GoogleAuthorizationCodeFlow.Builder(
             HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES
-        )
-            .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
-            .setAccessType("offline")
-            .build()
+        ).setAccessType("offline")
+
+        val flow = if (config.googleRefreshToken == null) {
+            flowBuilder.setDataStoreFactory(
+                FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH))
+            ).build()
+        } else {
+            val tokens = TokenResponse()
+                .setRefreshToken(config.googleRefreshToken)
+                .setAccessToken("")
+                .setExpiresInSeconds(0)
+
+            flowBuilder.setDataStoreFactory(MemoryDataStoreFactory())
+                .build()
+                .apply { createAndStoreCredential(tokens, "user") }
+        }
+
         val receiver = LocalServerReceiver.Builder().setPort(8888).build()
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }

@@ -1,13 +1,27 @@
 # === Required fields ===
 
-# The path to your org file
+# The URL or path to your org file
+# Can be supplied by the ORG_FILE environment variable instead
 orgFile: "~/path/to/file.org"
 
 # The ID for the Google calendar to be affected
+# Can be supplied by the CALENDAR_ID environment variable instead
 calendarId: "your-calendar-id@group.calendar.google.com"
+
+# The OAuth refresh token for your Google account, scoped for read/write calendar access
+# Can be supplied by the GOOGLE_REFRESH_TOKEN environment variable instead
+# If not present, then the `tokens` directory in the current working directory will be used as fallback
+googleRefreshToken: "token_here"
+
+# The contents of your credentials.json; if absent, the file at `credentialFile` will be used
+# Can be supplied by the GOOGLE_SECRETS environment variable instead
+googleSecrets: "{ \"secret\": \"some_secrets_here\" }"
 
 
 # === Optional fields; default values are shown here ===
+
+# True if `orgFile` is a local path, false if it is a URL
+localOrgFile: false
 
 # The path of the headline whose children represent events
 orgEventsPath: ""  # "" represents the root of the org document

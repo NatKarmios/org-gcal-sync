@@ -1,5 +1,7 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.org
 
+import com.github.kittinunf.fuel.httpGet
+import com.karmios.code.orggcalsync.utils.Config
 import com.orgzly.org.OrgHead
 import com.orgzly.org.parser.OrgNode
 import com.orgzly.org.parser.OrgNodeInList
@@ -9,7 +11,7 @@ import java.io.File
 import java.util.*
 
 /**
- * A node in an tree representing an org-mode document
+ * A node in a tree representing an org-mode document
  */
 sealed interface Org {
     /**
@@ -30,15 +32,27 @@ sealed interface Org {
     companion object {
         private val logger = LogManager.getLogger(Org::class.java.simpleName)
 
-        private fun loadHeadsFrom(fileName: String, config: Config): List<OrgNodeInList> =
+        private fun loadHeads(input: String, config: Config): List<OrgNodeInList> =
             OrgParser.Builder()
-                .setInput(File(fileName).bufferedReader())
+                .setInput(input)
                 .setTodoKeywords(config.todoKeywords.toSet())
                 .setDoneKeywords(config.doneKeywords.toSet())
                 .build()
-                .also { logger.debug("Reading and parsing org from '$fileName'") }
+                .also { logger.trace("Parsing org data...") }
                 .parse()
                 .headsInList
+
+        private fun loadInput(orgFile: String, isLocal: Boolean) =
+            if (isLocal) {
+                logger.trace("Reading org data from file...")
+                File(orgFile).readText()
+            } else {
+                logger.trace("Fetching org data from URL...")
+                val (_, _, result) = orgFile
+                    .httpGet()
+                    .responseString()
+                result.get()
+            }
 
         /**
          * Creates a tree from an org-mode file
@@ -46,7 +60,13 @@ sealed interface Org {
          * @param config Configuration
          * @return The newly-created tree
          */
-        fun load(config: Config): OrgRoot = OrgRoot(loadHeadsFrom(config.orgFile.expanded, config), config)
+        fun load(config: Config, orgData: String?): OrgRoot {
+            if (orgData.isNullOrBlank() && config.orgFile.isNullOrBlank())
+                throw IllegalArgumentException("No org file provided!")
+            val input = orgData ?: loadInput(config.orgFile!!, config.localOrgFile)
+            val heads = loadHeads(input, config)
+            return OrgRoot(heads, config)
+        }
     }
 
     /**
@@ -78,7 +98,7 @@ sealed interface Org {
         }
 
         private fun findEventsAt(path: String) : List<OrgEvent>? {
-            logger.debug("Finding event headlines at '$path'")
+            logger.trace("Finding event headlines at '$path'...")
             val node = findNodeAt(path) ?: return null
             return OrgEvent.buildListFrom(node, config)
         }
@@ -103,7 +123,7 @@ sealed interface Org {
 
         init {
             val children = mutableListOf<OrgNodeInTree>()
-            while (nodes.peek()?.level ?: 0 > node.level)
+            while ((nodes.peek()?.level ?: 0) > node.level)
                 children.add(OrgNodeInTree(nodes.remove(), nodes, this))
             this.children = children
         }

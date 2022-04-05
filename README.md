@@ -15,7 +15,7 @@ Options:
 ```
 
 ## Configuration
-See [`config.example.yml`](./config.example.yml).
+See [`config.example.yml`](./config.example.yaml).
 
 `org-gcal-sync` requires Google API credentials; get these from your admin console.
 

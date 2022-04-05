@@ -1,6 +1,7 @@
-package com.karmios.code.orggcalsync
+package com.karmios.code.orggcalsync.org
 
-import com.karmios.code.orggcalsync.Org.OrgNodeInTree
+import com.karmios.code.orggcalsync.org.Org.OrgNodeInTree
+import com.karmios.code.orggcalsync.utils.*
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
@@ -19,6 +20,7 @@ import java.util.Calendar
  * @property state Event's state, as configured with todoKeywords / doneKeywords
  * @property tags List of event's tags, including inherited
  * @property ownTags List of event's tags, not including inherited
+ * @property location The location of the event
  * @constructor
  */
 data class OrgEvent(
@@ -28,8 +30,9 @@ data class OrgEvent(
     val end: EventDate?,
     val reminderOffset: Int?,
     val state: String?,
-    val tags: List<String>,
-    val ownTags: List<String>
+    val tags: Set<String>,
+    val ownTags: Set<String>,
+    val location: String?
 ) {
     /**
      * @param config Configuration
@@ -78,15 +81,18 @@ data class OrgEvent(
             return OrgEvent(
                 head.title.trim(),
                 head.content.trim(),
-                start.calendar to start.hasTime(),
-                start.endCalendar?.let { it to true }
+                start.calendar.withZone(config.timeZoneId) to start.hasTime(),
+                start.endCalendar
+                    ?.withZone(config.timeZoneId)
+                    ?.let { it to true }
                     ?: head.scheduled?.endTime
-                        ?.asEventDate
+                        ?.toEventDate(config.timeZoneId)
                     ?: ends[head.title.trim()],
                 head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
                 head.state,
-                node.inheritedTags,
-                head.tags.toList()
+                node.inheritedTags.toSet(),
+                head.tags.toSet(),
+                head.properties["LOCATION"]
             )
         }
 
@@ -95,7 +101,7 @@ data class OrgEvent(
                 val head = node.head
                 if ("end" in head.tags) {
                     head.scheduled?.startTime
-                        ?.asEventDate
+                        ?.toEventDate(config.timeZoneId)
                         ?.let { head.title.trim() to it }
                 } else null
             }.toMap()
