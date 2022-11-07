@@ -3,8 +3,6 @@ package com.karmios.code.orggcalsync.utils
 import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.model.Event as GcalEvent
 import com.google.api.services.calendar.model.EventDateTime
-import com.google.api.services.calendar.model.EventReminder
-import com.karmios.code.orggcalsync.org.OrgEvent
 import com.orgzly.org.datetime.OrgDateTime
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -15,6 +13,8 @@ import java.io.File
 import java.io.PrintStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.*
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.*
 
 import kotlin.text.replaceFirstChar
@@ -51,18 +51,42 @@ val String?.nullIfBlank
 
 // <editor-fold desc="Time/Date">
 
-typealias EventDate = Pair<Calendar, Boolean>
+typealias EventDate = Pair<ZonedDateTime, Boolean>
 
-fun Calendar.withZone(zoneId: ZoneId): Calendar {
-    this.timeZone = TimeZone.getTimeZone(zoneId)
-    return this
-}
+fun String.toTimeZoneId(): ZoneId? =
+    if (this in TimeZone.getAvailableIDs())
+        TimeZone.getTimeZone(this).toZoneId()
+    else null
 
 /**
  * The given date, converted to milliseconds since epoch
  */
 fun LocalDate.toMillis(zoneOffset: ZoneOffset) =
     this.toEpochSecond(LocalTime.MIDNIGHT, zoneOffset) * 1000
+
+fun String.toZonedDateTimeOrNull(fmt: DateTimeFormatter) = try {
+    ZonedDateTime.parse(this, fmt)
+} catch (_: DateTimeParseException) {
+    null
+}
+
+fun String.toLocalDateTimeOrNull(fmt: DateTimeFormatter) = try {
+    LocalDateTime.parse(this, fmt)
+} catch (_: DateTimeParseException) {
+    null
+}
+
+fun String.toEventDateOrNull(defaultTimeZone: ZoneId) =
+    toZonedDateTimeOrNull(DateTimeFormatter.ISO_OFFSET_DATE)?.let { it to false }
+    ?: toZonedDateTimeOrNull(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { it to true }
+    ?: toLocalDateTimeOrNull(DateTimeFormatter.ISO_LOCAL_DATE)?.let { ZonedDateTime.of(it, defaultTimeZone) to false }
+    ?: toLocalDateTimeOrNull(DateTimeFormatter.ISO_LOCAL_DATE_TIME)?.let { ZonedDateTime.of(it, defaultTimeZone) to true }
+
+fun Calendar.toZonedDateTime(zoneId: ZoneId) =
+    ZonedDateTime.ofInstant(this.toInstant(), zoneId)!!
+
+fun OrgDateTime.toEventDate(zoneId: ZoneId) =
+    this.calendar.toZonedDateTime(zoneId) to this.hasTime()
 
 // </editor-fold>
 
@@ -74,38 +98,11 @@ fun readResource(path: String, fallbackPath: String) =
         ?.reader()?.readText()
         ?: File(fallbackPath).readText()
 
-// <editor-fold desc="Org">
-
-/**
- * Converted to EventDate
- */
-fun OrgDateTime.toEventDate(zoneId: ZoneId) =
-    this.calendar.withZone(zoneId) to this.hasTime()
-
-/**
- * Converted to GcalEvent
- */
-fun OrgEvent.toGcal(offset: ZoneOffset) =
-    GcalEvent().also { event ->
-        event.summary = this.title.trim()
-        event.description = this.content.trim()
-        event.start = this.start.toGcalDate(0, 12, offset)
-        event.end = this.end?.toGcalDate(0, 36, offset)
-            ?: this.start.toGcalDate(1, 36, offset)
-        event.reminders = GcalEvent.Reminders().also {
-            it.useDefault = false
-            val reminder = this.reminderOffset?.let { offset ->
-                EventReminder().also { reminder ->
-                    reminder.method = "popup"
-                    reminder.minutes = offset
-                }
-            }
-            it.overrides = listOfNotNull(reminder)
-        }
-        event.location = this.location
-    }
-
-// </editor-fold>
+fun <T> MutableList<T>.findAndRemove(pred: (T) -> Boolean): T? = indexOfFirst(pred).let { ix ->
+    if (ix != -1)
+        this.removeAt(ix)
+    else null
+}
 
 // <editor-fold desc="Gcal">
 
@@ -115,17 +112,19 @@ fun OrgEvent.toGcal(offset: ZoneOffset) =
  * @param shiftIfDateTime Time offset (in hours) if the date includes time
  * @param shiftIfDate Time offset (in hours) if the date *does not* include time
  */
-fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int, offset: ZoneOffset): EventDateTime {
+fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int): EventDateTime {
     val (date, hasTime) = this
 
     val gcalDate = EventDateTime()
-    val millis = date.timeInMillis
-    val offSecs = offset.totalSeconds / 60
+    val millis = date.toInstant().toEpochMilli()
+    val tzOffsetMinutes = date.offset.totalSeconds / 60
 
     if (hasTime)
-        gcalDate.dateTime = DateTime(millis + shiftIfDateTime * HOUR, offSecs)
+        gcalDate.dateTime = DateTime(millis + shiftIfDateTime * HOUR, tzOffsetMinutes)
     else
-        gcalDate.date = DateTime(true, millis + shiftIfDate * HOUR, offSecs)
+        gcalDate.date = DateTime(true, millis + shiftIfDate * HOUR, tzOffsetMinutes)
+
+    gcalDate.timeZone = date.zone.id
 
     return gcalDate
 }
@@ -136,6 +135,10 @@ fun EventDate.toGcalDate(shiftIfDateTime: Int, shiftIfDate: Int, offset: ZoneOff
 val GcalEvent.endMillis
     get() = this.end.dateTime?.value
         ?: this.end.date.value
+
+private fun isNonceEq(a: GcalEvent, b: GcalEvent) =
+    a.extendedProperties?.private?.get("nonce") ==
+            b.extendedProperties?.private?.get("nonce")
 
 /**
  * Deep equality based on org-relevant fields
@@ -150,7 +153,10 @@ fun isEq(a: GcalEvent?, b: GcalEvent?, logger: Logger): Boolean {
         (a.start eq b.start) to "start time",
         (a.end eq b.end) to "end time",
         (a.reminders eq b.reminders) to "reminder list",
-        (a.location == b.location) to "location"
+        (a.location == b.location) to "location",
+        (isNonceEq(a, b)) to "nonce",
+        (a.recurrence == b.recurrence) to "recurrence"
+
     ).mapNotNull { (isEq, property) -> if (isEq) null else property }
 
     return conflictingProperties.isEmpty().also { if (!it) {

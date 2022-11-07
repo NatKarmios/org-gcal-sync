@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.util.*
 
 data class Config(
     val orgFile: String? = System.getenv("ORG_FILE").nullIfBlank,
@@ -32,15 +31,8 @@ data class Config(
     val timeZone: String? = null
 ) {
     val timeZoneId: ZoneId by lazy {
-        if (timeZone in TimeZone.getAvailableIDs()) {
-            TimeZone.getTimeZone(timeZone).toZoneId().also {
-                logger.debug("Found time zone '${it.id}'")
-            }
-        } else {
-            ZoneId.systemDefault().also {
-                logger.debug("Using system default time zone '${it.id}'")
-            }
-        }
+        timeZone?.toTimeZoneId()?.also { logger.debug("Found time zone '${it.id}'") }
+            ?: let { ZoneId.systemDefault().also { logger.debug("Using system default time zone '${it.id}'") } }
     }
 
     val zoneOffset: ZoneOffset by lazy {

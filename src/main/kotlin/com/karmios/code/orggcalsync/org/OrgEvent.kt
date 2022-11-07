@@ -32,7 +32,9 @@ data class OrgEvent(
     val state: String?,
     val tags: Set<String>,
     val ownTags: Set<String>,
-    val location: String?
+    val location: String?,
+    val repeat: OrgEventRepeat?,
+    val nonce: String?
 ) {
     /**
      * @param config Configuration
@@ -76,23 +78,27 @@ data class OrgEvent(
         private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>, config: Config): OrgEvent? {
             val head = node.head
             if ("end" in head.tags) return null
-            val start = head.scheduled?.startTime
-                ?: return null
+            val scheduled = head.scheduled ?: return null
+
+            val timeZoneId = head.properties["TIME_ZONE"]?.toTimeZoneId() ?: config.timeZoneId
+            val startDate = scheduled.startTime ?: return null
+            val start = startDate.toEventDate(timeZoneId)
+            val end = startDate.endCalendar?.toZonedDateTime(timeZoneId)?.let { it to true }
+                ?: scheduled.endTime?.toEventDate(timeZoneId)
+                ?: ends[head.title.trim()]
+
             return OrgEvent(
                 head.title.trim(),
                 head.content.trim(),
-                start.calendar.withZone(config.timeZoneId) to start.hasTime(),
-                start.endCalendar
-                    ?.withZone(config.timeZoneId)
-                    ?.let { it to true }
-                    ?: head.scheduled?.endTime
-                        ?.toEventDate(config.timeZoneId)
-                    ?: ends[head.title.trim()],
-                head.scheduled?.startTime?.delay?.let { getDelayInMinutes(start.calendar, it, config.zoneOffset) },
+                start,
+                end,
+                startDate.delay?.let { getDelayInMinutes(startDate.calendar, it, config.zoneOffset) },
                 head.state,
                 node.inheritedTags.toSet(),
                 head.tags.toSet(),
-                head.properties["LOCATION"]
+                head.properties["LOCATION"],
+                OrgEventRepeat.fromOrg(head, start, end, timeZoneId),
+                head.properties["NONCE"]
             )
         }
 

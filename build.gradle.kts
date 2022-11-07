@@ -40,9 +40,9 @@ dependencies {
     with(Versions) {
         implementation(kotlin("stdlib"))
         implementation("com.orgzly:org-java:$orgzly")
-        implementation("com.google.api-client:google-api-client:$google_api")
-        implementation("com.google.oauth-client:google-oauth-client-jetty:$google_api")
-        implementation("com.google.apis:google-api-services-calendar:v3-rev305-$google_api")
+        implementation("com.google.api-client:google-api-client:2.0.0")
+        implementation("com.google.oauth-client:google-oauth-client-jetty:1.34.1")
+        implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
         implementation("com.sksamuel.hoplite:hoplite-core:$hoplite")
         implementation("com.sksamuel.hoplite:hoplite-yaml:$hoplite")
         implementation("org.jetbrains.kotlinx:kotlinx-cli:$kotlinx_cli")
@@ -58,7 +58,6 @@ dependencies {
 }
 
 object Versions {
-    const val google_api      = "1.23.0"
     const val hoplite         = "1.4.3"
     const val kotlinx_cli     = "0.3.2"
     const val log4j           = "2.14.1"

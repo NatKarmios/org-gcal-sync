@@ -14,7 +14,7 @@ import com.google.api.client.http.HttpContent
 import com.google.api.client.http.HttpHeaders
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.JsonFactory
-import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.client.util.store.MemoryDataStoreFactory
@@ -54,15 +54,14 @@ class GcalClient (private val config: Config) {
         val now = LocalDate.now()
         val rangeStart = now.plusMonths(startMonthOffset).plusDays(1)
         val rangeEnd = now.plusMonths(endMonthOffset)
-        val events: Events = service.events().list(config.calendarId)
+        val response: Events = service.events().list(config.calendarId)
             .setTimeZone(config.timeZoneId.id)
             .setMaxResults(1000)
             .setTimeMin(DateTime(rangeStart.toMillis(config.zoneOffset)))
             .setTimeMax(DateTime(rangeEnd.toMillis(config.zoneOffset)))
-            .setOrderBy("startTime")
-            .setSingleEvents(true)
             .execute()
-        return events.items
+        val events = response.items.filter { it.status != "cancelled" }
+        return events
             .also { logger.debug("Found Gcal events: " + it.joinToString(", ") { e -> e.summary }) }
     }
 
@@ -117,7 +116,7 @@ class GcalClient (private val config: Config) {
 
     companion object {
         private const val APPLICATION_NAME = "Org Gcal Sync"
-        private val JSON_FACTORY: JsonFactory = JacksonFactory.getDefaultInstance()
+        private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
         private const val TOKENS_DIRECTORY_PATH = "tokens"
         private val SCOPES = listOf(CalendarScopes.CALENDAR)
 
