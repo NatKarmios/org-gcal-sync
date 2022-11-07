@@ -49,7 +49,16 @@ data class OrgEventRepeat(
                 }
 
             val excludeRaw = head.properties["EX_DATES"]?.split("|") ?: emptyList()
-            val exclude = excludeRaw.mapNotNull { it.trim().toEventDateOrNull(zoneId)?.first }
+            val exclude = excludeRaw.mapNotNull {
+                it.trim().toEventDateOrNull(zoneId)?.let { (date, hasTime) ->
+                    if (hasTime)
+                        date
+                    else
+                        date.withHour(start.first.hour)
+                            .withMinute(start.first.minute)
+                            .withSecond(start.first.second)
+                }
+            }
 
             return OrgEventRepeat(
                 originalStart,

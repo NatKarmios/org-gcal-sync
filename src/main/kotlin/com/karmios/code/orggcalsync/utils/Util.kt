@@ -70,7 +70,13 @@ fun String.toZonedDateTimeOrNull(fmt: DateTimeFormatter) = try {
     null
 }
 
-fun String.toLocalDateTimeOrNull(fmt: DateTimeFormatter) = try {
+fun String.toLocalDateOrNull(fmt: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE) = try {
+    LocalDate.parse(this, fmt)
+} catch (_: DateTimeParseException) {
+    null
+}
+
+fun String.toLocalDateTimeOrNull(fmt: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME) = try {
     LocalDateTime.parse(this, fmt)
 } catch (_: DateTimeParseException) {
     null
@@ -79,8 +85,8 @@ fun String.toLocalDateTimeOrNull(fmt: DateTimeFormatter) = try {
 fun String.toEventDateOrNull(defaultTimeZone: ZoneId) =
     toZonedDateTimeOrNull(DateTimeFormatter.ISO_OFFSET_DATE)?.let { it to false }
     ?: toZonedDateTimeOrNull(DateTimeFormatter.ISO_OFFSET_DATE_TIME)?.let { it to true }
-    ?: toLocalDateTimeOrNull(DateTimeFormatter.ISO_LOCAL_DATE)?.let { ZonedDateTime.of(it, defaultTimeZone) to false }
-    ?: toLocalDateTimeOrNull(DateTimeFormatter.ISO_LOCAL_DATE_TIME)?.let { ZonedDateTime.of(it, defaultTimeZone) to true }
+    ?: toLocalDateOrNull()?.let { it.atStartOfDay(defaultTimeZone) to false }
+    ?: toLocalDateTimeOrNull()?.let { it.atZone(defaultTimeZone) to true }
 
 fun Calendar.toZonedDateTime(zoneId: ZoneId) =
     ZonedDateTime.ofInstant(this.toInstant(), zoneId)!!

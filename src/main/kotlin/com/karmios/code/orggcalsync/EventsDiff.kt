@@ -7,6 +7,7 @@ import com.karmios.code.orggcalsync.org.OrgEventRepeat
 import com.karmios.code.orggcalsync.utils.*
 import com.orgzly.org.datetime.OrgInterval
 import org.apache.logging.log4j.LogManager
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.google.api.services.calendar.model.Event as GcalEvent
 
@@ -46,7 +47,7 @@ class EventsDiff private constructor(
             }
         }
 
-        private fun GcalEvent.addRepeat(repeat: OrgEventRepeat) {
+        private fun GcalEvent.addRepeat(repeat: OrgEventRepeat, defaultZoneId: ZoneId) {
             this.start = repeat.originalStart.toGcalDate(0, 12)
             this.end = repeat.originalEnd?.toGcalDate(0, 36)
                 ?: repeat.originalStart.toGcalDate(1, 36)
@@ -63,7 +64,10 @@ class EventsDiff private constructor(
             val count = repeat.numRepeats?.let { ";COUNT=$it" } ?: ""
             repeatRules.add("RRULE:FREQ=$frequency$interval$count")
 
-            val exDates = repeat.exclude.map { exDate -> exDate.format(DateTimeFormatter.BASIC_ISO_DATE)!! }
+            val exDates = repeat.exclude.map { exDate ->
+                exDate.withZoneSameInstant(defaultZoneId)
+                    .format(DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"))!!
+            }
             if (exDates.isNotEmpty())
                 repeatRules.add("EXDATE:" + exDates.joinToString(","))
             this.recurrence = repeatRules.toList()
@@ -72,7 +76,7 @@ class EventsDiff private constructor(
         /**
          * Converted to GcalEvent
          */
-        private fun OrgEvent.toGcal() =
+        private fun OrgEvent.toGcal(defaultZoneId: ZoneId) =
             GcalEvent().also { event ->
                 event.summary = this.title.trim()
                 event.description = this.content.trim()
@@ -83,7 +87,7 @@ class EventsDiff private constructor(
 
                 event.addNonce(this)
                 event.addReminder(this)
-                this.repeat?.let { event.addRepeat(it) }
+                this.repeat?.let { event.addRepeat(it, defaultZoneId) }
             }
 
         /**
@@ -101,7 +105,7 @@ class EventsDiff private constructor(
             val sortedGcalEvents = gcalEvents.sortedByDescending { (it.start.date ?: it.start.dateTime!!).value }
                 .toMutableList()
             val sortedOrgEvents = orgEvents.sortedByDescending { it.start.first }
-                .map { it to it.toGcal() }
+                .map { it to it.toGcal(config.timeZoneId) }
 
             sortedOrgEvents.forEach { (orgEventRaw, orgEvent) ->
                 val gcalEvent = if (orgEventRaw.nonce !== null)
