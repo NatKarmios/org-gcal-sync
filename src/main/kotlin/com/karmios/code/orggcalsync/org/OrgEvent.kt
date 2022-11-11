@@ -34,7 +34,8 @@ data class OrgEvent(
     val ownTags: Set<String>,
     val location: String?,
     val repeat: OrgEventRepeat?,
-    val nonce: String?
+    val nonce: String?,
+    val color: String?
 ) {
     /**
      * @param config Configuration
@@ -75,6 +76,14 @@ data class OrgEvent(
     companion object {
         private val logger = LogManager.getLogger(OrgEvent::class.java.simpleName)
 
+        private fun pickColor(tags: List<String>, config: Config): String? {
+            config.colorMap.forEach { (requiredTags, color) ->
+                if (tags.containsAll(requiredTags.split(" ")))
+                    return color.toString()
+            }
+            return null
+        }
+
         private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>, config: Config): OrgEvent? {
             val head = node.head
             if ("end" in head.tags) return null
@@ -98,7 +107,8 @@ data class OrgEvent(
                 head.tags.toSet(),
                 head.properties["LOCATION"],
                 OrgEventRepeat.fromOrg(head, start, end, timeZoneId),
-                head.properties["NONCE"]
+                head.properties["NONCE"],
+                pickColor(head.tags, config)
             )
         }
 

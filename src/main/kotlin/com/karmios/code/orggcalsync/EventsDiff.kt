@@ -84,6 +84,7 @@ class EventsDiff private constructor(
                 event.end = this.end?.toGcalDate(0, 36)
                     ?: this.start.toGcalDate(1, 36)
                 event.location = this.location
+                color?.let { event.colorId = it }
 
                 event.addNonce(this)
                 event.addReminder(this)

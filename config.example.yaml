@@ -67,3 +67,8 @@ deleteGracePeriod: 24
 # The time zone to be assumed for all dates
 # e.g. GMT, PST, Europe/London, etc.
 timeZone: # null; falls back on system default
+
+# Maps sets of tags to event color IDs (see README.md) for event colors
+colorMap:
+  # - tag1 tag2: 5
+  # - tag1: 8

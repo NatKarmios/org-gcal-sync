@@ -161,7 +161,8 @@ fun isEq(a: GcalEvent?, b: GcalEvent?, logger: Logger): Boolean {
         (a.reminders eq b.reminders) to "reminder list",
         (a.location == b.location) to "location",
         (isNonceEq(a, b)) to "nonce",
-        (a.recurrence == b.recurrence) to "recurrence"
+        (a.recurrence == b.recurrence) to "recurrence",
+        (a.colorId == b.colorId) to "color id"
 
     ).mapNotNull { (isEq, property) -> if (isEq) null else property }
 

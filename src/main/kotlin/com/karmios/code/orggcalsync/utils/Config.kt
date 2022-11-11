@@ -10,7 +10,7 @@ import java.time.ZoneOffset
 
 data class Config(
     val orgFile: String? = System.getenv("ORG_FILE").nullIfBlank,
-    val localOrgFile: Boolean = false,
+    val localOrgFile: Boolean = !System.getenv("LOCAL_ORG_FILE").isNullOrBlank(),
     val calendarId: String = System.getenv("CALENDAR_ID").nullIfBlank
         ?: throw IllegalArgumentException("No calendar ID supplied!"),
     val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN").nullIfBlank,
@@ -28,7 +28,8 @@ data class Config(
     val ignoreTodos: Boolean = false,
     val createEventsMarkedAsDone: Boolean = false,
     val deleteGracePeriod: Int = 24,
-    val timeZone: String? = null
+    val timeZone: String? = null,
+    val colorMap: Map<String, Int> = emptyMap()
 ) {
     val timeZoneId: ZoneId by lazy {
         timeZone?.toTimeZoneId()?.also { logger.debug("Found time zone '${it.id}'") }
