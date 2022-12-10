@@ -91,8 +91,10 @@ fun String.toEventDateOrNull(defaultTimeZone: ZoneId) =
 fun Calendar.toZonedDateTime(zoneId: ZoneId) =
     ZonedDateTime.ofInstant(this.toInstant(), zoneId)!!
 
-fun OrgDateTime.toEventDate(zoneId: ZoneId) =
-    this.calendar.toZonedDateTime(zoneId) to this.hasTime()
+fun OrgDateTime.toEventDate(defaultZoneId: ZoneId, zoneId: ZoneId? = null) =
+    this.calendar.toZonedDateTime(defaultZoneId)
+        .let { if (zoneId != null) it.withZoneSameLocal(zoneId) else it  }
+        .let { it to this.hasTime() }
 
 // </editor-fold>
 

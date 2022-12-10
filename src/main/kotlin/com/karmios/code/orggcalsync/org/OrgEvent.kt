@@ -89,11 +89,16 @@ data class OrgEvent(
             if ("end" in head.tags) return null
             val scheduled = head.scheduled ?: return null
 
-            val timeZoneId = head.properties["TIME_ZONE"]?.toTimeZoneId() ?: config.timeZoneId
+            val timeZoneId = head.properties["TIME_ZONE"]?.toTimeZoneId()
             val startDate = scheduled.startTime ?: return null
-            val start = startDate.toEventDate(timeZoneId)
-            val end = startDate.endCalendar?.toZonedDateTime(timeZoneId)?.let { it to true }
-                ?: scheduled.endTime?.toEventDate(timeZoneId)
+            val start = startDate.toEventDate(config.timeZoneId, timeZoneId)
+            val end = startDate.endCalendar?.toZonedDateTime(config.timeZoneId)?.let {
+                if (timeZoneId != null)
+                    it.withZoneSameLocal(timeZoneId) to true
+                else
+                    it to true
+            }
+                ?: scheduled.endTime?.toEventDate(config.timeZoneId, timeZoneId)
                 ?: ends[head.title.trim()]
 
             return OrgEvent(
@@ -106,7 +111,7 @@ data class OrgEvent(
                 node.inheritedTags.toSet(),
                 head.tags.toSet(),
                 head.properties["LOCATION"],
-                OrgEventRepeat.fromOrg(head, start, end, timeZoneId),
+                OrgEventRepeat.fromOrg(head, start, end, timeZoneId ?: config.timeZoneId),
                 head.properties["NONCE"],
                 pickColor(head.tags, config)
             )
@@ -116,8 +121,9 @@ data class OrgEvent(
             val ends = nodes.mapNotNull { node ->
                 val head = node.head
                 if ("end" in head.tags) {
+                    val timeZoneId = head.properties["TIME_ZONE"]?.toTimeZoneId()
                     head.scheduled?.startTime
-                        ?.toEventDate(config.timeZoneId)
+                        ?.toEventDate(config.timeZoneId, timeZoneId)
                         ?.let { head.title.trim() to it }
                 } else null
             }.toMap()
