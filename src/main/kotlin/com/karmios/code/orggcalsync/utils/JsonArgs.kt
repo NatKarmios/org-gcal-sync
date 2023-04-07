@@ -7,5 +7,5 @@ class JsonArgs(json: JsonObject?) : Args() {
     override val dry = json?.boolean("dry") ?: false
     override val autoRetry = false
     override val configPath = DEFAULT_CONFIG_FILE
-    override val logLevelRaw: Int? = null
+    override val logLevelRaw: Int? = json?.int("logLevel")
 }
