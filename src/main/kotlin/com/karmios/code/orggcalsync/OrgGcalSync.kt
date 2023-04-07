@@ -1,6 +1,7 @@
 package com.karmios.code.orggcalsync
 
 import com.google.api.client.auth.oauth2.TokenResponseException
+import com.google.gson.Gson
 import com.karmios.code.orggcalsync.extern.GcalClient
 import com.karmios.code.orggcalsync.org.Org
 import com.karmios.code.orggcalsync.utils.*
@@ -43,6 +44,8 @@ object OrgGcalSync {
                 val config = logger.traceAction("loading config") { Config.load(args) }
                 val org = logger.traceAction("loading org data") { Org.load(config, orgData) }
                 val orgEvents = logger.traceAction("building events from org data") { org.findEvents() }
+                if (logger.isTraceEnabled)
+                    logger.trace("Got Org events: ${Gson().toJson(orgEvents)}")
                 val gcal = logger.traceAction("creating gcal client") { GcalClient(config) }
                 val gcalEvents = logger.traceAction("loading gcal events") { gcal.getEvents() }
                 val diff = logger.traceAction(
