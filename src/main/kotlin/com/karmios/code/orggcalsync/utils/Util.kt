@@ -145,62 +145,11 @@ val GcalEvent.endMillis
     get() = this.end.dateTime?.value
         ?: this.end.date.value
 
-private fun isNonceEq(a: GcalEvent, b: GcalEvent) =
-    a.extendedProperties?.private?.get("nonce") ==
-            b.extendedProperties?.private?.get("nonce")
-
-/**
- * Deep equality based on org-relevant fields
- */
-fun isEq(a: GcalEvent?, b: GcalEvent?, logger: Logger): Boolean {
-    if (a == null && b == null) return true
-    if (a == null || b == null) return false
-
-    val conflictingProperties = listOf(
-        ((a.summary ?: "") == (b.summary ?: "")) to "summary",
-        ((a.description ?: "") == (b.description ?: "")) to "description",
-        (a.start eq b.start) to "start time",
-        (a.end eq b.end) to "end time",
-        (a.reminders eq b.reminders) to "reminder list",
-        (a.location == b.location) to "location",
-        (isNonceEq(a, b)) to "nonce",
-        (a.recurrence == b.recurrence) to "recurrence",
-        (a.colorId == b.colorId) to "color id"
-
-    ).mapNotNull { (isEq, property) -> if (isEq) null else property }
-
-    return conflictingProperties.isEmpty().also { if (!it) {
-        val name = a.summary ?: b.summary
-        val conflicts = conflictingProperties.joinToString(", ")
-        logger.debug("Event '$name' conflicts due to mismatched $conflicts")
-    } }
-}
-
 /**
  * Clean string representation of an EventDateTime - used for easy equality check
  */
 val EventDateTime.display: String
     get() = this.date?.toString() ?: this.dateTime!!.toStringRfc3339()
-
-infix fun EventDateTime.eq(that: EventDateTime): Boolean {
-    return this.display == that.display
-}
-
-/**
- * Deep equality based on org-relevant fields
- */
-infix fun GcalEvent.Reminders?.eq(that: GcalEvent.Reminders?): Boolean {
-    if (this == null && that == null) return true
-    if (this == null || that == null) return false
-
-    val aOverrides = this.overrides ?: emptyList()
-    val bOverrides = that.overrides ?: emptyList()
-
-    return this.useDefault == that.useDefault
-            && aOverrides.size == bOverrides.size
-            && aOverrides.sortedBy { it.minutes }.zip(bOverrides.sortedBy { it.minutes })
-        .all { (a, b) -> a.minutes == b.minutes && a.method == b.method }
-}
 
 // </editor-fold>
 
