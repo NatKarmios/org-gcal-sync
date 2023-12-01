@@ -29,7 +29,8 @@ data class Config(
     val createEventsMarkedAsDone: Boolean = false,
     val deleteGracePeriod: Int = 24,
     val timeZone: String? = null,
-    val colorMap: Map<String, Int> = emptyMap()
+    val colorMap: Map<String, Int> = emptyMap(),
+    val attendeeNicknames: Map<String, String> = emptyMap(),
 ) {
     val timeZoneId: ZoneId by lazy {
         timeZone?.toTimeZoneId()?.also { logger.debug("Found time zone '${it.id}'") }

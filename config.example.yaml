@@ -68,7 +68,11 @@ deleteGracePeriod: 24
 # e.g. GMT, PST, Europe/London, etc.
 timeZone: # null; falls back on system default
 
+# Maps "nicknames" for attendees to their email address
+attendeeNicknames:
+  # john: "john.smith@example.com"
+
 # Maps sets of tags to event color IDs (see README.md) for event colors
 colorMap:
-  # - tag1 tag2: 5
-  # - tag1: 8
+  # "tag1 tag2": 5
+  # "tag1": 8
