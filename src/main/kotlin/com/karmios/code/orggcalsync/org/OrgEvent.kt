@@ -4,6 +4,7 @@ import com.karmios.code.orggcalsync.org.Org.OrgNodeInTree
 import com.karmios.code.orggcalsync.utils.*
 import com.orgzly.org.datetime.OrgDelay
 import com.orgzly.org.datetime.OrgInterval
+import org.apache.commons.validator.routines.EmailValidator
 import org.apache.logging.log4j.LogManager
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -34,6 +35,7 @@ data class OrgEvent(
     val ownTags: Set<String>,
     val location: String?,
     val repeat: OrgEventRepeat?,
+    val attendees: List<String>,
     val nonce: String?,
     val color: String?
 ) {
@@ -84,11 +86,20 @@ data class OrgEvent(
             return null
         }
 
+        private fun buildAttendees(rawAttendees: String?, title: String, config: Config): List<String> =
+            (rawAttendees ?: "").split(",").map { a ->
+                a.trim().let { config.attendeeNicknames[it] ?: it }
+            }.filter {
+                EmailValidator.getInstance().isValid(it)
+                    .also { isValid -> if (!isValid) logger.warn("Ignoring invalid attendee '$it' of '$title'") }
+            }
+
         private fun fromOrg(node: OrgNodeInTree, ends: Map<String, EventDate>, config: Config): OrgEvent? {
             val head = node.head
             if ("end" in head.tags) return null
             val scheduled = head.scheduled ?: return null
 
+            val title = head.title.trim()
             val timeZoneId = head.properties["TIME_ZONE"]?.toTimeZoneId()
             val startDate = scheduled.startTime ?: return null
             val start = startDate.toEventDate(config.timeZoneId, timeZoneId)
@@ -99,10 +110,10 @@ data class OrgEvent(
                     it to true
             }
                 ?: scheduled.endTime?.toEventDate(config.timeZoneId, timeZoneId)
-                ?: ends[head.title.trim()]
+                ?: ends[title]
 
             return OrgEvent(
-                head.title.trim(),
+                title,
                 head.content.trim(),
                 start,
                 end,
@@ -112,8 +123,9 @@ data class OrgEvent(
                 head.tags.toSet(),
                 head.properties["LOCATION"],
                 OrgEventRepeat.fromOrg(head, start, end, timeZoneId ?: config.timeZoneId),
+                buildAttendees(head.properties["ATTENDEES"], title, config),
                 head.properties["NONCE"],
-                pickColor(head.tags, config)
+                pickColor(head.tags, config),
             )
         }
 

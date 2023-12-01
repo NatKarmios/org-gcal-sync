@@ -1,6 +1,7 @@
 package com.karmios.code.orggcalsync
 
 import com.google.api.services.calendar.model.Event
+import com.google.api.services.calendar.model.EventAttendee
 import com.google.api.services.calendar.model.EventReminder
 import com.karmios.code.orggcalsync.org.OrgEvent
 import com.karmios.code.orggcalsync.org.OrgEventRepeat
@@ -89,6 +90,7 @@ class EventsDiff private constructor(
                 event.addNonce(this)
                 event.addReminder(this)
                 this.repeat?.let { event.addRepeat(it, defaultZoneId) }
+                event.attendees = this.attendees.map { a -> EventAttendee().also { it.email = a } }
             }
 
         /**

@@ -29,6 +29,15 @@ private infix fun Event.Reminders?.eq(that: Event.Reminders?): Boolean {
         .all { (a, b) -> a.minutes == b.minutes && a.method == b.method }
 }
 
+/** Equality of EventAttendee lists based on the email field */
+private infix fun List<EventAttendee>?.eq(that: List<EventAttendee>?) : Boolean {
+    val thatCopy = that?.toMutableList() ?: mutableListOf()
+    this?.forEach { a ->
+        thatCopy.findAndRemove { b -> a.email == b.email } ?: return false
+    }
+    return thatCopy.isEmpty()
+}
+
 /**
  * Deep equality based on org-relevant fields
  */
@@ -45,6 +54,7 @@ fun isEq(a: Event?, b: Event?, logger: Logger): Boolean {
         (a.location == b.location) to "location",
         (isNonceEq(a, b)) to "nonce",
         (a.recurrence == b.recurrence) to "recurrence",
+        (a.attendees eq b.attendees) to "attendees",
         (a.colorId == b.colorId) to "color id"
 
     ).mapNotNull { (isEq, property) -> if (isEq) null else property }

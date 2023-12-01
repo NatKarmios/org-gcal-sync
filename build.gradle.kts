@@ -45,6 +45,7 @@ dependencies {
         implementation("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
         implementation("com.sksamuel.hoplite:hoplite-core:$hoplite")
         implementation("com.sksamuel.hoplite:hoplite-yaml:$hoplite")
+        implementation("commons-validator:commons-validator:$apacheCommonsValidator")
         implementation("org.jetbrains.kotlinx:kotlinx-cli:$kotlinx_cli")
         implementation("org.apache.logging.log4j:log4j-api:$log4j")
         implementation("org.apache.logging.log4j:log4j-core:$log4j")
@@ -67,6 +68,7 @@ object Versions {
     const val awsLambdaCore   = "1.2.1"
     const val awsLambdaEvents = "3.11.0"
     const val awsLambdaLog4j  = "1.5.1"
+    const val apacheCommonsValidator = "1.7"
 }
 
 val compileKotlin: KotlinCompile by tasks
