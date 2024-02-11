@@ -16,6 +16,8 @@ data class Config(
     val googleRefreshToken: String? = System.getenv("GOOGLE_REFRESH_TOKEN").nullIfBlank,
     val googleSecrets: String? = System.getenv("GOOGLE_SECRETS").nullIfBlank,
 
+    val startOffsetInMonths: Long = -1,
+    val endOffsetInMonths: Long = 24,
     val orgEventsPath: String = "",
     val credentialFile: String = "./credentials.json",
     val todoKeywords: List<String> = listOf("TODO", "WAIT", "STRT", "PROJ"),

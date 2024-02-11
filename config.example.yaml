@@ -1,3 +1,7 @@
+####################################################
+###  PUT YOUR config.yaml IN src/main/resources  ###
+####################################################
+
 # === Required fields ===
 
 # The URL or path to your org file

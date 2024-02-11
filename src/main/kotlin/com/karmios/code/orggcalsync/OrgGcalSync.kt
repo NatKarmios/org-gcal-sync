@@ -47,7 +47,9 @@ object OrgGcalSync {
                 if (logger.isTraceEnabled)
                     logger.trace("Got Org events: ${Gson().toJson(orgEvents)}")
                 val gcal = logger.traceAction("creating gcal client") { GcalClient(config) }
-                val gcalEvents = logger.traceAction("loading gcal events") { gcal.getEvents() }
+                val gcalEvents = logger.traceAction("loading gcal events") {
+                    gcal.getEvents(config.startOffsetInMonths, config.endOffsetInMonths)
+                }
                 val diff = logger.traceAction(
                     "finding differences between org and gcal events"
                 ) { EventsDiff.from(orgEvents, gcalEvents, config) }
