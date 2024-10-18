@@ -1,3 +1,5 @@
+***Note: I don't use org-mode anymore, and have since switched to Obsidian, so I no longer use this project and will not continue to maintain it. Forks are welcome!***
+
 # `org-gcal-sync`
 *A one-way event synchronisation tool from org-mode to Google Calendar*
 
